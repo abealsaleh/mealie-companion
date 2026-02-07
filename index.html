@@ -834,7 +834,7 @@
   <div class="add-bar">
     <input type="text" id="add-item-input" placeholder="Add an item..." autocomplete="off"
            oninput="onAddItemInput()" onfocus="onAddItemInput()">
-    <button class="btn btn-primary btn-sm" onclick="addItemFromInput()" style="display:flex;align-items:center;gap:4px"><i data-lucide="plus" style="width:16px;height:16px"></i> Add</button>
+    <button class="btn btn-primary btn-sm" id="add-item-btn" onclick="addItemFromInput()" style="display:flex;align-items:center;gap:4px"><i data-lucide="plus" style="width:16px;height:16px" id="add-item-icon"></i> <span id="add-item-label">Add</span></button>
     <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
   </div>
 
@@ -1659,6 +1659,21 @@ function selectFoodItem(food) {
   addItemFromInput();
 }
 
+function setAddButtonLoading(loading) {
+  const btn = document.getElementById('add-item-btn');
+  const icon = document.getElementById('add-item-icon');
+  const label = document.getElementById('add-item-label');
+  if (loading) {
+    btn.disabled = true;
+    icon.style.display = 'none';
+    label.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;margin:0"></span>';
+  } else {
+    btn.disabled = false;
+    icon.style.display = '';
+    label.textContent = 'Add';
+  }
+}
+
 async function addItemFromInput() {
   const input = document.getElementById('add-item-input');
   const text = input.value.trim();
@@ -1667,6 +1682,7 @@ async function addItemFromInput() {
   const overrideLabel = document.getElementById('category-override').value;
   document.getElementById('autocomplete-dropdown').classList.remove('visible');
   document.getElementById('category-select-bar').classList.remove('visible');
+  setAddButtonLoading(true);
 
   try {
     const body = {
@@ -1674,15 +1690,14 @@ async function addItemFromInput() {
       checked: false,
     };
 
+    const hasLabel = overrideLabel || (selectedFood && selectedFood.labelId);
+
     if (selectedFood) {
-      // Link to existing food - Mealie auto-assigns the food's label
       body.foodId = selectedFood.id;
-      // Only set explicit label if user overrode it
       if (overrideLabel && overrideLabel !== selectedFood.labelId) {
         body.labelId = overrideLabel;
       }
     } else {
-      // No matching food - add as note with optional label override
       body.note = text;
       if (overrideLabel) {
         body.labelId = overrideLabel;
@@ -1698,8 +1713,23 @@ async function addItemFromInput() {
     document.getElementById('category-override').value = '';
     toast(`Added "${text}"`);
     await refreshList();
+
+    // If item had no category, prompt user to pick one
+    if (!hasLabel) {
+      const added = activeListItems.find(i =>
+        (!i.checked) && (
+          (i.food?.name && i.food.name.toLowerCase() === text.toLowerCase()) ||
+          (i.note && i.note.toLowerCase() === text.toLowerCase())
+        )
+      );
+      if (added) {
+        openLabelModal(added.id);
+      }
+    }
   } catch (err) {
     toast('Failed to add item');
+  } finally {
+    setAddButtonLoading(false);
   }
 }
 
