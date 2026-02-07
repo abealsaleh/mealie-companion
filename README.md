@@ -54,7 +54,7 @@ Deploy to `/volume1/docker/support/mealie-companion/`. Access via port 9944, or 
 
 ### Authentication
 
-Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Session tokens are stored in `sessionStorage` and auto-refresh every 20 minutes. No API keys to manage.
+Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports username or email. Session tokens auto-refresh every 20 minutes. With "Remember me" checked (default), the token is stored in `localStorage` so sessions persist across PWA restarts; unchecked uses `sessionStorage` for single-session use. No API keys to manage.
 
 ### Meal Plan
 
@@ -71,8 +71,10 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Session tok
 - **List selector**: switch between your Mealie shopping lists
 - **Category grouping**: items grouped by label with collapsible sections and orange headers
 - **Autocomplete**: searches Mealie's food database (`/api/foods`) as you type with keyboard navigation (arrow keys + Enter); selecting a food links it via `foodId` so the food's label is auto-assigned for category grouping
-- **New items**: items not in the food database are added as note-based items with optional manual category selection
-- **Searchable label picker**: tap a label badge to reassign categories; search/filter labels by name. Changes propagate back to Mealie's food database
+- **New items**: items not in the food database are added as note-based items; uncategorized items automatically prompt for a category after adding
+- **Quantity stepper**: tap +/− to adjust item quantity inline
+- **Notes**: tap the note icon to add or edit a note on any item; icon highlights when a note exists
+- **Searchable label picker**: tap a label badge to reassign categories; search/filter labels by name; create new categories inline. Changes propagate back to Mealie's food database
 - **Tap to check/uncheck**: items move between active and checked sections
 - **Clear checked**: deletes all checked items from the list
 - **Pull to refresh**: on mobile, pull down to re-fetch
@@ -103,4 +105,4 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Session tok
 - `DELETE /api/households/shopping/items/{id}` - remove item
 - `GET /api/foods?search=` - autocomplete food search
 - `GET/PUT /api/foods/{id}` - read/update food (for label propagation)
-- `GET /api/groups/labels` - category labels
+- `GET/POST /api/groups/labels` - list and create category labels
