@@ -450,17 +450,76 @@
       text-decoration: line-through;
       color: var(--text-dim);
     }
-    .shop-item .delete-btn {
-      display: none;
-      background: none;
-      border: none;
-      color: var(--accent);
-      font-size: 18px;
-      padding: 4px 8px;
+    .shop-item .item-label-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 3px 8px;
       cursor: pointer;
       margin-left: 8px;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
-    .shop-item.checked .delete-btn { display: block; }
+    .shop-item .item-label-btn:active { background: var(--accent-light); color: var(--accent); }
+    .shop-item.checked .item-label-btn { display: none; }
+
+    /* --- Label picker modal --- */
+    .label-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 300;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .label-modal-overlay.visible { display: flex; }
+    .label-modal {
+      background: var(--surface);
+      border-radius: var(--radius) var(--radius) 0 0;
+      width: 100%;
+      max-width: 480px;
+      max-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+    }
+    .label-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .label-modal-header button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+    }
+    .label-modal-list {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .label-modal-item {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .label-modal-item:active { background: var(--accent-light); }
+    .label-modal-item.active { color: var(--accent); font-weight: 600; }
+    .label-modal-item .lm-check { width: 18px; color: var(--success); }
 
     .checked-section {
       border-top: 2px solid var(--border);
@@ -645,6 +704,16 @@
   </div>
 </div>
 
+<div class="label-modal-overlay" id="label-modal" onclick="if(event.target===this)closeLabelModal()">
+  <div class="label-modal">
+    <div class="label-modal-header">
+      <span id="label-modal-title">Change Category</span>
+      <button onclick="closeLabelModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    </div>
+    <div class="label-modal-list" id="label-modal-list"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -691,6 +760,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function init() {
   hideSetup();
+  restoreActiveTab();
   try {
     await Promise.all([loadLabels(), loadShoppingLists(), loadMealPlan()]);
     populateCategoryOverride();
@@ -860,7 +930,13 @@ function switchTab(name) {
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById(name + '-tab').classList.add('active');
   document.querySelector(`nav button[onclick*="${name}"]`).classList.add('active');
+  localStorage.setItem('mealie_active_tab', name);
   if (name === 'shopping' && activeListId) refreshList();
+}
+
+function restoreActiveTab() {
+  const saved = localStorage.getItem('mealie_active_tab');
+  if (saved && saved !== 'mealplan') switchTab(saved);
 }
 
 // ─── Helpers ───
@@ -1241,11 +1317,13 @@ function renderItem(item, isChecked) {
   const name = getItemDisplayName(item);
   const qty = item.quantity && item.quantity > 1 ? `×${item.quantity}` : '';
   const note = item.food?.name && item.note ? item.note : '';
+  const labelName = item.label?.name || item.food?.label?.name || '';
   return `
-    <div class="shop-item ${isChecked ? 'checked' : ''}" onclick="toggleItem('${item.id}', ${!isChecked})">
-      <div class="check-circle"></div>
-      <span class="item-text">${escHtml(name)}${note ? ` <span style="color:var(--text-dim);font-size:13px">(${escHtml(note)})</span>` : ''}</span>
+    <div class="shop-item ${isChecked ? 'checked' : ''}">
+      <div class="check-circle" onclick="toggleItem('${item.id}', ${!isChecked})"></div>
+      <span class="item-text" onclick="toggleItem('${item.id}', ${!isChecked})">${escHtml(name)}${note ? ` <span style="color:var(--text-dim);font-size:13px">(${escHtml(note)})</span>` : ''}</span>
       ${qty ? `<span class="item-qty">${qty}</span>` : ''}
+      <button class="item-label-btn" onclick="event.stopPropagation();openLabelModal('${item.id}')">${labelName ? escHtml(labelName) : 'No label'}</button>
     </div>
   `;
 }
@@ -1370,16 +1448,15 @@ async function addItemFromInput() {
       }
     }
 
-    const newItem = await api('/households/shopping/items', {
+    await api('/households/shopping/items', {
       method: 'POST',
       body,
     });
-    activeListItems.push(newItem);
-    renderShoppingList();
     input.value = '';
     selectedFood = null;
     document.getElementById('category-override').value = '';
     toast(`Added "${text}"`);
+    await refreshList();
   } catch (err) {
     toast('Failed to add item');
   }
@@ -1389,6 +1466,63 @@ function addItemDirect() {
   selectedFood = null;
   document.getElementById('autocomplete-dropdown').classList.remove('visible');
   addItemFromInput();
+}
+
+// ─── Label picker modal ───
+let labelEditItemId = null;
+
+function openLabelModal(itemId) {
+  labelEditItemId = itemId;
+  const item = activeListItems.find(i => i.id === itemId);
+  if (!item) return;
+
+  const currentLabelId = item.labelId || item.label?.id || item.food?.label?.id || null;
+  const name = getItemDisplayName(item);
+  document.getElementById('label-modal-title').textContent = name;
+
+  const list = document.getElementById('label-modal-list');
+  let html = `<div class="label-modal-item ${!currentLabelId ? 'active' : ''}" onclick="setItemLabel(null)">
+    <span class="lm-check">${!currentLabelId ? '✓' : ''}</span> No label
+  </div>`;
+  allLabels.sort((a,b) => a.name.localeCompare(b.name)).forEach(l => {
+    const isActive = currentLabelId === l.id;
+    html += `<div class="label-modal-item ${isActive ? 'active' : ''}" onclick="setItemLabel('${l.id}')">
+      <span class="lm-check">${isActive ? '✓' : ''}</span> ${escHtml(l.name)}
+    </div>`;
+  });
+  list.innerHTML = html;
+
+  document.getElementById('label-modal').classList.add('visible');
+}
+
+function closeLabelModal() {
+  document.getElementById('label-modal').classList.remove('visible');
+  labelEditItemId = null;
+}
+
+async function setItemLabel(labelId) {
+  const item = activeListItems.find(i => i.id === labelEditItemId);
+  if (!item) return;
+  closeLabelModal();
+
+  const oldLabelId = item.labelId;
+  const oldLabel = item.label;
+  item.labelId = labelId;
+  item.label = labelId ? labelMap[labelId] || { id: labelId, name: '...' } : null;
+  renderShoppingList();
+
+  try {
+    await api(`/households/shopping/items/${item.id}`, {
+      method: 'PUT',
+      body: { ...item, labelId: labelId || null },
+    });
+    await refreshList();
+  } catch (err) {
+    item.labelId = oldLabelId;
+    item.label = oldLabel;
+    renderShoppingList();
+    toast('Failed to update category');
+  }
 }
 
 // ─── Pull to refresh ───
