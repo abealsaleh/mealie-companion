@@ -46,10 +46,6 @@ Single-page app (HTML/CSS/JS, no build step) served by nginx:alpine. nginx proxi
 
 6. Sign in with your Mealie username or email on first use.
 
-### Synology NAS
-
-Deploy to `/volume1/docker/support/mealie-companion/`. Access via port 9944, or set up a reverse proxy in Synology's Control Panel for SSL.
-
 ## Features
 
 ### Authentication
@@ -58,20 +54,20 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 
 ### Meal Plan
 
-- **8-day rolling view**: shows today through 7 days ahead in the left column, with refresh button
-- **Quick add** (right column): auto-detects URLs vs recipe names
+- **8-day rolling view**: shows today through 7 days ahead, with refresh button
+- **Quick add**: tap the + button to open the add form; auto-detects URLs vs recipe names
 - **Recipe search**: searches existing recipes with keyboard navigation (arrow keys + Enter)
 - **URL import**: imports recipes from URLs via Mealie's scraper
 - **Day-of-week date picker** (defaults to today, shows "Today", "Tomorrow", day names with dates) and **meal type selector** (defaults to dinner)
 - **Delete entries**: remove meals directly from the plan view
-- Two-column layout on desktop, stacked on mobile
 
 ### Shopping List
 
 - **List selector**: switch between your Mealie shopping lists
 - **Category grouping**: items grouped by label with collapsible sections and orange headers
-- **Autocomplete**: searches Mealie's food database (`/api/foods`) as you type with keyboard navigation (arrow keys + Enter); selecting a food links it via `foodId` so the food's label is auto-assigned for category grouping
-- **New items**: items not in the food database are added as note-based items; uncategorized items automatically prompt for a category after adding
+- **Add items**: tap the + button to open the add form with autocomplete from Mealie's food database (`/api/foods`); keyboard navigation (arrow keys + Enter) supported
+- **Food linking**: all items are created as food entries so names are stored in `food.name` and the `note` field stays available for actual notes; selecting an existing food links it via `foodId` so the food's label is auto-assigned for category grouping
+- **New items**: uncategorized items automatically prompt for a category after adding
 - **Quantity stepper**: tap +/− to adjust item quantity inline
 - **Notes**: tap the note icon to add or edit a note on any item; icon highlights when a note exists
 - **Searchable label picker**: tap a label badge to reassign categories; search/filter labels by name; create new categories inline. Changes propagate back to Mealie's food database

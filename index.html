@@ -13,15 +13,19 @@
 </head>
 <body>
 
-<div class="top-actions">
-  <a class="top-action-btn" href="https://github.com/abealsaleh/mealie-companion/issues/new" target="_blank" rel="noopener" title="Report issue"><i data-lucide="bug" class="icon"></i></a>
-  <button class="top-action-btn" onclick="logout()" title="Sign out"><i data-lucide="log-out" class="icon"></i></button>
-</div>
-
-<nav>
-  <button class="active" onclick="switchTab('mealplan')"><i data-lucide="calendar-plus" class="icon"></i> Meal Plan</button>
-  <button onclick="switchTab('shopping')"><i data-lucide="shopping-cart" class="icon"></i> Shopping</button>
-</nav>
+<header>
+  <div class="header-bar">
+    <span class="app-title">Mealie Companion</span>
+    <div class="header-actions">
+      <a class="header-action-btn" href="https://github.com/abealsaleh/mealie-companion/issues/new" target="_blank" rel="noopener" title="Report issue"><i data-lucide="bug" class="icon"></i></a>
+      <button class="header-action-btn" onclick="logout()" title="Sign out"><i data-lucide="log-out" class="icon"></i></button>
+    </div>
+  </div>
+  <nav>
+    <button class="active" onclick="switchTab('mealplan')"><i data-lucide="calendar-plus" class="icon"></i> Meal Plan</button>
+    <button onclick="switchTab('shopping')"><i data-lucide="shopping-cart" class="icon"></i> Shopping</button>
+  </nav>
+</header>
 
 <!-- Login screen -->
 <div id="setup">
@@ -42,27 +46,28 @@
 
 <!-- Meal Plan Tab -->
 <div id="mealplan-tab" class="tab active">
-  <div class="mp-columns">
-    <!-- Left column: Plan view -->
-    <div class="mp-col-plan">
-      <div class="mp-range-header">
-        <span id="mp-range-label" style="flex:1;text-align:center">Next 8 Days</span>
-        <button class="btn btn-outline btn-sm" onclick="loadMealPlan()" style="display:flex;align-items:center;padding:6px"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
-      </div>
-      <div id="mp-plan-content">
-        <div class="loading-bar visible"><span class="spinner"></span> Loading meal plan...</div>
-      </div>
+  <div class="mp-range-header">
+    <span id="mp-range-label" style="flex:1;text-align:center">Next 8 Days</span>
+    <button class="btn btn-outline btn-sm" onclick="loadMealPlan()" style="display:flex;align-items:center;padding:6px"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
+  </div>
+  <div class="mp-plan-scroll">
+    <div id="mp-plan-content">
+      <div class="loading-bar visible"><span class="spinner"></span> Loading meal plan...</div>
     </div>
-    <!-- Right column: Add form -->
-    <div class="mp-col-add">
+  </div>
+  <button class="fab" onclick="toggleAddPanel('mealplan')" id="mp-fab"><i data-lucide="plus" style="width:24px;height:24px"></i></button>
+  <div class="add-modal-overlay" id="mp-add-modal" onclick="if(event.target===this)closeAddPanel('mealplan')">
+    <div class="add-modal">
+      <div class="add-modal-header">
+        <span>Add to Meal Plan</span>
+        <button onclick="closeAddPanel('mealplan')"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+      </div>
       <div class="form-group">
         <label><i data-lucide="search" style="width:14px;height:14px;vertical-align:-2px"></i> Recipe name or URL</label>
         <input type="text" id="mp-input" placeholder="Paste URL or type recipe name..." autocomplete="off">
       </div>
       <div class="input-hint">Paste a URL to import, or type to search existing recipes</div>
-
       <div id="mp-search-results" class="search-results" style="display:none"></div>
-
       <div class="form-row">
         <div class="form-group">
           <label>Date</label>
@@ -81,17 +86,14 @@
           </select>
         </div>
       </div>
-
       <div style="padding: 0 16px 16px">
         <button class="btn btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" id="mp-submit" onclick="submitMealPlan()">
           <i data-lucide="plus" class="icon"></i> Add to Meal Plan
         </button>
       </div>
-
       <div id="mp-loading" class="loading-bar">
         <span class="spinner"></span> Working...
       </div>
-
       <div id="mp-results"></div>
     </div>
   </div>
@@ -105,25 +107,33 @@
     </select>
     <button class="btn btn-outline btn-sm" onclick="refreshList()" style="display:flex;align-items:center;padding:8px"><i data-lucide="refresh-cw" style="width:16px;height:16px"></i></button>
   </div>
-
-  <div class="add-bar">
-    <input type="text" id="add-item-input" placeholder="Add an item..." autocomplete="off"
-           oninput="onAddItemInput()" onfocus="onAddItemInput()">
-    <button class="btn btn-primary btn-sm" id="add-item-btn" onclick="addItemFromInput()" style="display:flex;align-items:center;gap:4px"><i data-lucide="plus" style="width:16px;height:16px" id="add-item-icon"></i> <span id="add-item-label">Add</span></button>
-    <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
-  </div>
-
-  <div class="category-select-bar" id="category-select-bar">
-    <span>Category:</span>
-    <select id="category-override">
-      <option value="">Auto</option>
-    </select>
-  </div>
-
   <div class="shopping-scroll" id="shopping-scroll">
     <div class="pull-indicator" id="pull-indicator">↓ Pull to refresh</div>
     <div id="shopping-content">
       <div class="empty-state">Select a shopping list to get started</div>
+    </div>
+  </div>
+  <button class="fab" onclick="toggleAddPanel('shopping')" id="shop-fab"><i data-lucide="plus" style="width:24px;height:24px"></i></button>
+  <div class="add-modal-overlay" id="shop-add-modal" onclick="if(event.target===this)closeAddPanel('shopping')">
+    <div class="add-modal">
+      <div class="add-modal-header">
+        <span>Add Item</span>
+        <button onclick="closeAddPanel('shopping')"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+      </div>
+      <div class="add-modal-body">
+        <div class="add-modal-input-row">
+          <input type="text" id="add-item-input" placeholder="Add an item..." autocomplete="off"
+                 oninput="onAddItemInput()" onfocus="onAddItemInput()">
+          <button class="btn btn-primary btn-sm" id="add-item-btn" onclick="addItemFromInput()" style="display:flex;align-items:center;gap:4px"><i data-lucide="plus" style="width:16px;height:16px" id="add-item-icon"></i> <span id="add-item-label">Add</span></button>
+        </div>
+        <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
+        <div class="category-select-bar" id="category-select-bar">
+          <span>Category:</span>
+          <select id="category-override">
+            <option value="">Auto</option>
+          </select>
+        </div>
+      </div>
     </div>
   </div>
 </div>

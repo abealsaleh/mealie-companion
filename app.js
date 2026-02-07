@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   // Close autocomplete on outside tap
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.add-bar')) {
+    if (!e.target.closest('.add-modal-body')) {
       document.getElementById('autocomplete-dropdown').classList.remove('visible');
     }
   });
@@ -229,6 +229,30 @@ function showSetup() {
 }
 function hideSetup() {
   document.getElementById('setup').classList.remove('active');
+}
+
+// ─── Add panel toggle ───
+function toggleAddPanel(tab) {
+  const modalId = tab === 'mealplan' ? 'mp-add-modal' : 'shop-add-modal';
+  const fabId = tab === 'mealplan' ? 'mp-fab' : 'shop-fab';
+  const modal = document.getElementById(modalId);
+  const fab = document.getElementById(fabId);
+  const opening = !modal.classList.contains('visible');
+  modal.classList.toggle('visible');
+  fab.classList.toggle('fab-active', opening);
+  if (opening) {
+    initIcons();
+    setTimeout(() => {
+      if (tab === 'mealplan') document.getElementById('mp-input').focus();
+      else document.getElementById('add-item-input').focus();
+    }, 50);
+  }
+}
+function closeAddPanel(tab) {
+  const modalId = tab === 'mealplan' ? 'mp-add-modal' : 'shop-add-modal';
+  const fabId = tab === 'mealplan' ? 'mp-fab' : 'shop-fab';
+  document.getElementById(modalId).classList.remove('visible');
+  document.getElementById(fabId).classList.remove('fab-active');
 }
 
 // ─── Tab switching ───
@@ -662,6 +686,9 @@ async function toggleItem(itemId, checked) {
   const item = activeListItems.find(i => i.id === itemId);
   if (!item) return;
   item.checked = checked;
+  const now = new Date().toISOString();
+  item.updateAt = now;
+  item.updatedAt = now;
   renderShoppingList();
 
   try {
