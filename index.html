@@ -83,13 +83,16 @@
     .tab { display: none; flex-direction: column; flex: 1; overflow: hidden; }
     .tab.active { display: flex; }
 
-    /* --- Setup screen --- */
+    /* --- Setup screen (overlay) --- */
     #setup {
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      flex: 1;
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: var(--bg);
       padding: 24px;
       gap: 16px;
     }
@@ -149,32 +152,45 @@
     .btn-sm { padding: 8px 16px; font-size: 14px; }
     .btn-danger { background: #c0392b; color: white; }
 
-    /* --- Meal Plan Tab --- */
-    #mealplan-tab .scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    /* --- Meal Plan Tab (two-column layout) --- */
+    #mealplan-tab .mp-columns {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    #mealplan-tab .mp-col-plan {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      border-right: 1px solid var(--border);
+      min-width: 0;
+    }
+    #mealplan-tab .mp-col-add {
+      width: 340px;
+      flex-shrink: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    @media (max-width: 720px) {
+      #mealplan-tab .mp-columns { flex-direction: column-reverse; }
+      #mealplan-tab .mp-col-plan { border-right: none; }
+      #mealplan-tab .mp-col-add { width: 100%; flex-shrink: 1; overflow-y: visible; border-bottom: 1px solid var(--border); }
+    }
 
-    .mp-week-nav {
+    .mp-range-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       padding: 12px 16px;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
       position: sticky;
       top: 0;
       z-index: 10;
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-muted);
     }
-    .mp-week-nav .week-label { font-weight: 600; font-size: 15px; }
-    .mp-week-nav button {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      cursor: pointer;
-      padding: 6px 10px;
-      display: flex;
-      align-items: center;
-    }
-    .mp-week-nav button:active { background: var(--surface2); }
 
     .mp-day {
       border-bottom: 1px solid var(--border);
@@ -183,18 +199,18 @@
       display: flex;
       align-items: center;
       padding: 10px 16px;
-      background: var(--surface2);
+      background: var(--accent);
+      color: white;
       font-weight: 600;
       font-size: 14px;
       position: sticky;
-      top: 48px;
+      top: 44px;
       z-index: 5;
-      border-bottom: 1px solid var(--border);
     }
     .mp-day-header .day-name { flex: 1; }
-    .mp-day-header .day-date { color: var(--text-muted); font-weight: 400; font-size: 13px; }
-    .mp-day-header.today { color: var(--accent); }
-    .mp-day-header.today .day-date { color: var(--accent); }
+    .mp-day-header .day-date { color: rgba(255,255,255,0.85); font-weight: 400; font-size: 13px; }
+    .mp-day-header.today { background: var(--accent-hover); }
+    .mp-day-header.today .day-date { color: rgba(255,255,255,0.9); }
 
     .mp-meal-group {
       padding: 6px 16px 6px 32px;
@@ -353,6 +369,9 @@
       color: var(--accent);
       font-weight: 600;
     }
+    .autocomplete-dropdown .ac-item.kb-active { background: var(--accent-light); }
+
+    .search-results .item.kb-active { background: var(--accent-light); }
 
     .category-select-bar {
       display: none;
@@ -503,6 +522,20 @@
       padding: 4px;
       display: flex;
     }
+    .label-modal-search {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .label-modal-search input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 15px;
+      color: var(--text);
+    }
+    .label-modal-search input:focus { outline: none; border-color: var(--accent); }
     .label-modal-list {
       flex: 1;
       overflow-y: auto;
@@ -621,54 +654,54 @@
 
 <!-- Meal Plan Tab -->
 <div id="mealplan-tab" class="tab active">
-  <div class="scroll-area">
-    <div class="form-group">
-      <label><i data-lucide="search" style="width:14px;height:14px;vertical-align:-2px"></i> Recipe name or URL</label>
-      <input type="text" id="mp-input" placeholder="Paste URL or type recipe name..." autocomplete="off">
-    </div>
-    <div class="input-hint">Paste a URL to import, or type to search existing recipes</div>
-
-    <div id="mp-search-results" class="search-results" style="display:none"></div>
-
-    <div class="form-row">
-      <div class="form-group">
-        <label>Date</label>
-        <input type="date" id="mp-date">
-      </div>
-      <div class="form-group">
-        <label>Meal</label>
-        <select id="mp-meal">
-          <option value="breakfast">Breakfast</option>
-          <option value="lunch">Lunch</option>
-          <option value="dinner" selected>Dinner</option>
-          <option value="side">Side</option>
-          <option value="snack">Snack</option>
-          <option value="dessert">Dessert</option>
-          <option value="drink">Drink</option>
-        </select>
+  <div class="mp-columns">
+    <!-- Left column: Plan view -->
+    <div class="mp-col-plan">
+      <div class="mp-range-header" id="mp-range-label">Next 8 Days</div>
+      <div id="mp-plan-content">
+        <div class="loading-bar visible"><span class="spinner"></span> Loading meal plan...</div>
       </div>
     </div>
+    <!-- Right column: Add form -->
+    <div class="mp-col-add">
+      <div class="form-group">
+        <label><i data-lucide="search" style="width:14px;height:14px;vertical-align:-2px"></i> Recipe name or URL</label>
+        <input type="text" id="mp-input" placeholder="Paste URL or type recipe name..." autocomplete="off">
+      </div>
+      <div class="input-hint">Paste a URL to import, or type to search existing recipes</div>
 
-    <div style="padding: 0 16px 16px">
-      <button class="btn btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" id="mp-submit" onclick="submitMealPlan()">
-        <i data-lucide="plus" class="icon"></i> Add to Meal Plan
-      </button>
-    </div>
+      <div id="mp-search-results" class="search-results" style="display:none"></div>
 
-    <div id="mp-loading" class="loading-bar">
-      <span class="spinner"></span> Working...
-    </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="mp-date">
+        </div>
+        <div class="form-group">
+          <label>Meal</label>
+          <select id="mp-meal">
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner" selected>Dinner</option>
+            <option value="side">Side</option>
+            <option value="snack">Snack</option>
+            <option value="dessert">Dessert</option>
+            <option value="drink">Drink</option>
+          </select>
+        </div>
+      </div>
 
-    <div id="mp-results"></div>
+      <div style="padding: 0 16px 16px">
+        <button class="btn btn-primary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" id="mp-submit" onclick="submitMealPlan()">
+          <i data-lucide="plus" class="icon"></i> Add to Meal Plan
+        </button>
+      </div>
 
-    <div class="mp-week-nav">
-      <button onclick="shiftWeek(-1)"><i data-lucide="chevron-left" style="width:16px;height:16px"></i></button>
-      <span class="week-label" id="mp-week-label">This Week</span>
-      <button onclick="shiftWeek(1)"><i data-lucide="chevron-right" style="width:16px;height:16px"></i></button>
-    </div>
+      <div id="mp-loading" class="loading-bar">
+        <span class="spinner"></span> Working...
+      </div>
 
-    <div id="mp-plan-content">
-      <div class="loading-bar visible"><span class="spinner"></span> Loading meal plan...</div>
+      <div id="mp-results"></div>
     </div>
   </div>
 </div>
@@ -710,6 +743,9 @@
       <span id="label-modal-title">Change Category</span>
       <button onclick="closeLabelModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
     </div>
+    <div class="label-modal-search">
+      <input type="text" id="label-search-input" placeholder="Search categories..." oninput="filterLabelModal()" autocomplete="off">
+    </div>
     <div class="label-modal-list" id="label-modal-list"></div>
   </div>
 </div>
@@ -728,7 +764,9 @@ let selectedFood = null; // {id, name, labelId} from autocomplete
 let searchTimeout = null;
 let acSearchTimeout = null;
 let refreshTimer = null;
-let weekOffset = 0; // 0 = this week, -1 = last week, etc.
+let acKbIndex = -1;  // keyboard-highlighted index in shopping autocomplete
+let mpKbIndex = -1;  // keyboard-highlighted index in recipe search results
+const PLAN_DAYS = 8; // show today + 7 more days
 
 // ─── Init ───
 document.addEventListener('DOMContentLoaded', () => {
@@ -738,13 +776,28 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
   }
   document.getElementById('mp-date').value = todayStr();
-  document.getElementById('mp-week-label').textContent = getWeekLabel(0);
   setupPullToRefresh();
   document.getElementById('add-item-input').addEventListener('keydown', (e) => {
+    const dropdown = document.getElementById('autocomplete-dropdown');
+    const items = dropdown.querySelectorAll('.ac-item');
+    if (dropdown.classList.contains('visible') && items.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); acKbIndex = Math.min(acKbIndex + 1, items.length - 1); highlightAcItem(items); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); acKbIndex = Math.max(acKbIndex - 1, -1); highlightAcItem(items); return; }
+      if (e.key === 'Enter' && acKbIndex >= 0) { e.preventDefault(); items[acKbIndex].click(); return; }
+      if (e.key === 'Escape') { dropdown.classList.remove('visible'); acKbIndex = -1; return; }
+    }
     if (e.key === 'Enter') addItemFromInput();
   });
   document.getElementById('mp-input').addEventListener('input', onMpInput);
   document.getElementById('mp-input').addEventListener('keydown', (e) => {
+    const resultsEl = document.getElementById('mp-search-results');
+    const items = resultsEl.querySelectorAll('.item');
+    if (resultsEl.style.display === 'block' && items.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); mpKbIndex = Math.min(mpKbIndex + 1, items.length - 1); highlightMpItem(items); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); mpKbIndex = Math.max(mpKbIndex - 1, -1); highlightMpItem(items); return; }
+      if (e.key === 'Enter' && mpKbIndex >= 0) { e.preventDefault(); items[mpKbIndex].click(); return; }
+      if (e.key === 'Escape') { resultsEl.style.display = 'none'; mpKbIndex = -1; return; }
+    }
     if (e.key === 'Enter') submitMealPlan();
   });
   document.getElementById('login-password').addEventListener('keydown', (e) => {
@@ -970,14 +1023,11 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function getWeekRange(offset) {
-  const now = new Date();
-  const day = now.getDay(); // 0=Sun
-  const start = new Date(now);
-  start.setDate(now.getDate() - day + (offset * 7));
+function getPlanRange() {
+  const start = new Date();
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
-  end.setDate(start.getDate() + 6);
+  end.setDate(start.getDate() + PLAN_DAYS - 1);
   return { start, end };
 }
 
@@ -985,24 +1035,16 @@ function formatDateParam(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
-function getWeekLabel(offset) {
-  if (offset === 0) return 'This Week';
-  if (offset === -1) return 'Last Week';
-  if (offset === 1) return 'Next Week';
-  const { start, end } = getWeekRange(offset);
+function getRangeLabel() {
+  const { start, end } = getPlanRange();
   return `${MONTH_SHORT[start.getMonth()]} ${start.getDate()} – ${MONTH_SHORT[end.getMonth()]} ${end.getDate()}`;
 }
 
-function shiftWeek(dir) {
-  weekOffset += dir;
-  document.getElementById('mp-week-label').textContent = getWeekLabel(weekOffset);
-  loadMealPlan();
-}
-
 async function loadMealPlan() {
-  const { start, end } = getWeekRange(weekOffset);
+  const { start, end } = getPlanRange();
   const content = document.getElementById('mp-plan-content');
   content.innerHTML = '<div class="loading-bar visible"><span class="spinner"></span> Loading...</div>';
+  document.getElementById('mp-range-label').textContent = getRangeLabel();
 
   try {
     const data = await api(`/households/mealplans?start_date=${formatDateParam(start)}&end_date=${formatDateParam(end)}&perPage=50&page=1`);
@@ -1013,7 +1055,7 @@ async function loadMealPlan() {
   }
 }
 
-function renderMealPlan(weekStart, entries) {
+function renderMealPlan(rangeStart, entries) {
   const content = document.getElementById('mp-plan-content');
   const todayS = todayStr();
 
@@ -1025,16 +1067,17 @@ function renderMealPlan(weekStart, entries) {
   });
 
   let html = '';
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(weekStart);
-    d.setDate(weekStart.getDate() + i);
+  for (let i = 0; i < PLAN_DAYS; i++) {
+    const d = new Date(rangeStart);
+    d.setDate(rangeStart.getDate() + i);
     const dateStr = formatDateParam(d);
     const isToday = dateStr === todayS;
     const dayEntries = byDate[dateStr] || [];
+    const dayLabel = isToday ? 'Today' : (i === 1 ? 'Tomorrow' : DAY_NAMES[d.getDay()]);
 
     html += `<div class="mp-day">`;
     html += `<div class="mp-day-header ${isToday ? 'today' : ''}">
-      <span class="day-name">${isToday ? 'Today' : DAY_NAMES[d.getDay()]}</span>
+      <span class="day-name">${dayLabel}</span>
       <span class="day-date">${MONTH_SHORT[d.getMonth()]} ${d.getDate()}</span>
     </div>`;
 
@@ -1102,6 +1145,7 @@ function onMpInput() {
 
 async function searchRecipes(query) {
   const resultsEl = document.getElementById('mp-search-results');
+  mpKbIndex = -1;
   try {
     const data = await api(`/recipes?search=${encodeURIComponent(query)}&perPage=5&page=1`);
     const items = data.items || [];
@@ -1383,6 +1427,7 @@ function onAddItemInput() {
 
 async function searchFoods(query) {
   const dropdown = document.getElementById('autocomplete-dropdown');
+  acKbIndex = -1;
   try {
     const data = await api(`/foods?search=${encodeURIComponent(query)}&perPage=8&page=1`);
     const foods = data.items || [];
@@ -1493,6 +1538,9 @@ function openLabelModal(itemId) {
   list.innerHTML = html;
 
   document.getElementById('label-modal').classList.add('visible');
+  const searchInput = document.getElementById('label-search-input');
+  searchInput.value = '';
+  setTimeout(() => searchInput.focus(), 100);
 }
 
 function closeLabelModal() {
@@ -1563,6 +1611,26 @@ function setupPullToRefresh() {
       indicator.style.display = 'none';
     }
     pulling = false;
+  });
+}
+
+// ─── Keyboard navigation helpers ───
+function highlightAcItem(items) {
+  items.forEach((el, i) => el.classList.toggle('kb-active', i === acKbIndex));
+  if (acKbIndex >= 0) items[acKbIndex].scrollIntoView({ block: 'nearest' });
+}
+function highlightMpItem(items) {
+  items.forEach((el, i) => el.classList.toggle('kb-active', i === mpKbIndex));
+  if (mpKbIndex >= 0) items[mpKbIndex].scrollIntoView({ block: 'nearest' });
+}
+
+// ─── Label modal search ───
+function filterLabelModal() {
+  const query = document.getElementById('label-search-input').value.trim().toLowerCase();
+  const items = document.querySelectorAll('#label-modal-list .label-modal-item');
+  items.forEach(el => {
+    const name = el.textContent.toLowerCase();
+    el.style.display = name.includes(query) ? '' : 'none';
   });
 }
 
