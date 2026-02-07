@@ -558,10 +558,9 @@ let activeListId = localStorage.getItem('mealie_active_list') || '';
 let activeListItems = [];
 let allLabels = [];
 let labelMap = {};  // id → {name, ...}
-let prevBoughtItems = []; // cached autocomplete source
-let prevBoughtListId = null;
-let selectedAutocomplete = null; // {note, labelId}
+let selectedFood = null; // {id, name, labelId} from autocomplete
 let searchTimeout = null;
+let acSearchTimeout = null;
 let refreshTimer = null;
 
 // ─── Init ───
@@ -596,7 +595,6 @@ async function init() {
   try {
     await Promise.all([loadLabels(), loadShoppingLists()]);
     populateCategoryOverride();
-    await findPreviouslyBoughtList();
   } catch (err) {
     console.error('Init error:', err);
     if (err.message && err.message.includes('401')) {
@@ -916,7 +914,7 @@ function showMealPlanError(msg) {
 
 async function loadLabels() {
   const data = await api('/groups/labels');
-  allLabels = (data.items || data) ;
+  allLabels = (data.items || data);
   labelMap = {};
   allLabels.forEach(l => { labelMap[l.id] = l; });
 }
@@ -932,29 +930,6 @@ async function loadShoppingLists() {
     activeListId = shoppingLists[0].id;
   }
   if (activeListId) selectList(activeListId);
-}
-
-async function findPreviouslyBoughtList() {
-  const pb = shoppingLists.find(l => l.name.toLowerCase().includes('previously bought'));
-  if (pb) {
-    prevBoughtListId = pb.id;
-    await loadPrevBought();
-  }
-}
-
-async function loadPrevBought() {
-  if (!prevBoughtListId) return;
-  try {
-    const data = await api(`/households/shopping/lists/${prevBoughtListId}`);
-    const items = data.listItems || [];
-    prevBoughtItems = items.map(i => ({
-      note: (i.note || i.display || '').trim(),
-      labelId: i.label?.id || null,
-      labelName: i.label?.name || null,
-    })).filter(i => i.note);
-  } catch (e) {
-    console.error('Failed to load previously bought:', e);
-  }
 }
 
 function populateCategoryOverride() {
@@ -985,6 +960,13 @@ async function refreshList() {
   }
 }
 
+function getItemDisplayName(item) {
+  if (item.food?.name) return item.food.name;
+  if (item.note) return item.note;
+  if (item.display) return item.display;
+  return '(unnamed)';
+}
+
 function renderShoppingList() {
   const content = document.getElementById('shopping-content');
   const unchecked = activeListItems.filter(i => !i.checked);
@@ -998,7 +980,7 @@ function renderShoppingList() {
   // Group unchecked by label
   const groups = {};
   unchecked.forEach(item => {
-    const labelName = item.label?.name || 'Other';
+    const labelName = item.label?.name || item.food?.label?.name || 'Other';
     if (!groups[labelName]) groups[labelName] = [];
     groups[labelName].push(item);
   });
@@ -1043,19 +1025,19 @@ function renderShoppingList() {
 }
 
 function renderItem(item, isChecked) {
-  const note = item.note || item.display || '(unnamed)';
+  const name = getItemDisplayName(item);
   const qty = item.quantity && item.quantity > 1 ? `×${item.quantity}` : '';
+  const note = item.food?.name && item.note ? item.note : '';
   return `
     <div class="shop-item ${isChecked ? 'checked' : ''}" onclick="toggleItem('${item.id}', ${!isChecked})">
       <div class="check-circle"></div>
-      <span class="item-text">${escHtml(note)}</span>
+      <span class="item-text">${escHtml(name)}${note ? ` <span style="color:var(--text-dim);font-size:13px">(${escHtml(note)})</span>` : ''}</span>
       ${qty ? `<span class="item-qty">${qty}</span>` : ''}
     </div>
   `;
 }
 
 async function toggleItem(itemId, checked) {
-  // Optimistic UI update
   const item = activeListItems.find(i => i.id === itemId);
   if (!item) return;
   item.checked = checked;
@@ -1067,7 +1049,6 @@ async function toggleItem(itemId, checked) {
       body: { ...item, checked },
     });
   } catch (err) {
-    // Revert on failure
     item.checked = !checked;
     renderShoppingList();
     toast('Failed to update item');
@@ -1078,37 +1059,6 @@ async function clearCheckedItems() {
   const checked = activeListItems.filter(i => i.checked);
   if (checked.length === 0) return;
 
-  // Ensure checked items exist in Previously Bought list
-  if (prevBoughtListId) {
-    const prevNotes = new Set(prevBoughtItems.map(i => i.note.toLowerCase()));
-    const toAdd = checked.filter(i => {
-      const note = (i.note || '').trim().toLowerCase();
-      return note && !prevNotes.has(note);
-    });
-    // Add missing items to Previously Bought in background
-    for (const item of toAdd) {
-      try {
-        await api('/households/shopping/items', {
-          method: 'POST',
-          body: {
-            shoppingListId: prevBoughtListId,
-            note: item.note,
-            labelId: item.label?.id || null,
-            checked: false,
-          },
-        });
-        prevBoughtItems.push({
-          note: item.note,
-          labelId: item.label?.id || null,
-          labelName: item.label?.name || null,
-        });
-      } catch (e) {
-        console.error('Failed to add to previously bought:', e);
-      }
-    }
-  }
-
-  // Delete checked items
   for (const item of checked) {
     try {
       await api(`/households/shopping/items/${item.id}`, { method: 'DELETE' });
@@ -1122,88 +1072,108 @@ async function clearCheckedItems() {
   toast(`Cleared ${checked.length} items`);
 }
 
-// ─── Autocomplete ───
+// ─── Autocomplete (via Foods API) ───
 function onAddItemInput() {
-  const val = document.getElementById('add-item-input').value.trim().toLowerCase();
+  const val = document.getElementById('add-item-input').value.trim();
   const dropdown = document.getElementById('autocomplete-dropdown');
   const catBar = document.getElementById('category-select-bar');
-  selectedAutocomplete = null;
+  selectedFood = null;
 
-  if (val.length < 1) {
+  if (val.length < 2) {
     dropdown.classList.remove('visible');
     catBar.classList.remove('visible');
     return;
   }
 
-  // Filter previously bought items
-  const matches = prevBoughtItems.filter(i =>
-    i.note.toLowerCase().includes(val)
-  ).sort((a, b) => {
-    // Prefer prefix matches
-    const aStart = a.note.toLowerCase().startsWith(val) ? 0 : 1;
-    const bStart = b.note.toLowerCase().startsWith(val) ? 0 : 1;
-    return aStart - bStart || a.note.localeCompare(b.note);
-  }).slice(0, 8);
-
-  let html = matches.map(m => `
-    <div class="ac-item" onclick="selectAutocomplete('${escHtml(m.note).replace(/'/g, "\\'")}', ${m.labelId ? `'${m.labelId}'` : 'null'})">
-      ${escHtml(m.note)}
-      ${m.labelName ? `<span class="ac-label">${escHtml(m.labelName)}</span>` : ''}
-    </div>
-  `).join('');
-
-  // Always show "Add new" option
-  const rawVal = document.getElementById('add-item-input').value.trim();
-  html += `<div class="ac-item ac-new" onclick="addItemDirect()">+ Add "${escHtml(rawVal)}"</div>`;
-
-  dropdown.innerHTML = html;
-  dropdown.classList.add('visible');
   catBar.classList.add('visible');
+  clearTimeout(acSearchTimeout);
+  acSearchTimeout = setTimeout(() => searchFoods(val), 200);
 }
 
-function selectAutocomplete(note, labelId) {
-  document.getElementById('add-item-input').value = note;
+async function searchFoods(query) {
+  const dropdown = document.getElementById('autocomplete-dropdown');
+  try {
+    const data = await api(`/foods?search=${encodeURIComponent(query)}&perPage=8&page=1`);
+    const foods = data.items || [];
+
+    const rawVal = document.getElementById('add-item-input').value.trim();
+    let html = foods.map(f => {
+      const labelName = f.label?.name || '';
+      const fData = escHtml(JSON.stringify({ id: f.id, name: f.name, labelId: f.labelId || '' }));
+      return `
+        <div class="ac-item" onclick='selectFoodItem(${fData})'>
+          ${escHtml(f.name)}
+          ${labelName ? `<span class="ac-label">${escHtml(labelName)}</span>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    html += `<div class="ac-item ac-new" onclick="addItemDirect()">+ Add "${escHtml(rawVal)}" as new item</div>`;
+
+    dropdown.innerHTML = html;
+    dropdown.classList.add('visible');
+  } catch (e) {
+    dropdown.classList.remove('visible');
+  }
+}
+
+function selectFoodItem(food) {
+  document.getElementById('add-item-input').value = food.name;
   document.getElementById('autocomplete-dropdown').classList.remove('visible');
-  selectedAutocomplete = { note, labelId };
-  if (labelId) {
-    document.getElementById('category-override').value = labelId;
+  selectedFood = food;
+  if (food.labelId) {
+    document.getElementById('category-override').value = food.labelId;
   }
   addItemFromInput();
 }
 
 async function addItemFromInput() {
   const input = document.getElementById('add-item-input');
-  const note = input.value.trim();
-  if (!note) return;
+  const text = input.value.trim();
+  if (!text) return;
 
   const overrideLabel = document.getElementById('category-override').value;
-  let labelId = overrideLabel || (selectedAutocomplete?.labelId) || null;
-
   document.getElementById('autocomplete-dropdown').classList.remove('visible');
   document.getElementById('category-select-bar').classList.remove('visible');
 
   try {
+    const body = {
+      shoppingListId: activeListId,
+      checked: false,
+    };
+
+    if (selectedFood) {
+      // Link to existing food - Mealie auto-assigns the food's label
+      body.foodId = selectedFood.id;
+      // Only set explicit label if user overrode it
+      if (overrideLabel && overrideLabel !== selectedFood.labelId) {
+        body.labelId = overrideLabel;
+      }
+    } else {
+      // No matching food - add as note with optional label override
+      body.note = text;
+      if (overrideLabel) {
+        body.labelId = overrideLabel;
+      }
+    }
+
     const newItem = await api('/households/shopping/items', {
       method: 'POST',
-      body: {
-        shoppingListId: activeListId,
-        note: note,
-        labelId: labelId || undefined,
-        checked: false,
-      },
+      body,
     });
     activeListItems.push(newItem);
     renderShoppingList();
     input.value = '';
-    selectedAutocomplete = null;
+    selectedFood = null;
     document.getElementById('category-override').value = '';
-    toast(`Added "${note}"`);
+    toast(`Added "${text}"`);
   } catch (err) {
     toast('Failed to add item');
   }
 }
 
 function addItemDirect() {
+  selectedFood = null;
   document.getElementById('autocomplete-dropdown').classList.remove('visible');
   addItemFromInput();
 }
