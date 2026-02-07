@@ -186,8 +186,7 @@
     .mp-range-header {
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 12px 16px;
+      padding: 8px 12px;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
       position: sticky;
@@ -773,7 +772,10 @@
   <div class="mp-columns">
     <!-- Left column: Plan view -->
     <div class="mp-col-plan">
-      <div class="mp-range-header" id="mp-range-label">Next 8 Days</div>
+      <div class="mp-range-header">
+        <span id="mp-range-label" style="flex:1;text-align:center">Next 8 Days</span>
+        <button class="btn btn-outline btn-sm" onclick="loadMealPlan()" style="display:flex;align-items:center;padding:6px"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
+      </div>
       <div id="mp-plan-content">
         <div class="loading-bar visible"><span class="spinner"></span> Loading meal plan...</div>
       </div>
