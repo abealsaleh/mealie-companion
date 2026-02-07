@@ -1564,6 +1564,19 @@ async function setItemLabel(labelId) {
       method: 'PUT',
       body: { ...item, labelId: labelId || null },
     });
+    // Also update the food's label in Mealie so future uses inherit it
+    const foodId = item.foodId || item.food?.id;
+    if (foodId) {
+      try {
+        const food = await api(`/foods/${foodId}`);
+        await api(`/foods/${foodId}`, {
+          method: 'PUT',
+          body: { ...food, labelId: labelId || null },
+        });
+      } catch (e) {
+        console.warn('Could not update food label:', e);
+      }
+    }
     await refreshList();
   } catch (err) {
     item.labelId = oldLabelId;
