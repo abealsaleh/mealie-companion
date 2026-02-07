@@ -882,8 +882,22 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ─── Token storage (localStorage if "Remember me", sessionStorage otherwise) ───
+function getTokenStorage() {
+  return localStorage.getItem('mealie_remember') === 'true' ? localStorage : sessionStorage;
+}
+function saveToken(token) {
+  accessToken = token;
+  getTokenStorage().setItem('mealie_access_token', token);
+}
+function clearToken() {
+  accessToken = '';
+  localStorage.removeItem('mealie_access_token');
+  sessionStorage.removeItem('mealie_access_token');
+}
+
 // ─── State ───
-let accessToken = sessionStorage.getItem('mealie_access_token') || '';
+let accessToken = localStorage.getItem('mealie_access_token') || sessionStorage.getItem('mealie_access_token') || '';
 let shoppingLists = [];
 let activeListId = localStorage.getItem('mealie_active_list') || '';
 let activeListItems = [];
@@ -1045,8 +1059,8 @@ async function doLogin() {
     }
 
     const data = await resp.json();
-    accessToken = data.access_token;
-    sessionStorage.setItem('mealie_access_token', accessToken);
+    localStorage.setItem('mealie_remember', remember.toString());
+    saveToken(data.access_token);
     scheduleTokenRefresh();
     document.getElementById('login-password').value = '';
     toast('Signed in');
@@ -1067,8 +1081,7 @@ async function tryRefreshToken() {
     });
     if (!resp.ok) return false;
     const data = await resp.json();
-    accessToken = data.access_token;
-    sessionStorage.setItem('mealie_access_token', accessToken);
+    saveToken(data.access_token);
     scheduleTokenRefresh();
     return true;
   } catch {
@@ -1089,8 +1102,7 @@ function scheduleTokenRefresh() {
 }
 
 function logout() {
-  accessToken = '';
-  sessionStorage.removeItem('mealie_access_token');
+  clearToken();
   clearTimeout(refreshTimer);
   showSetup();
 }
