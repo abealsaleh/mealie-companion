@@ -665,6 +665,8 @@
     .label-modal-item:active { background: var(--accent-light); }
     .label-modal-item.active { color: var(--accent); font-weight: 600; }
     .label-modal-item .lm-check { width: 18px; color: var(--success); }
+    .label-modal-item.lm-create { color: var(--accent); font-weight: 600; }
+    .label-modal-item.lm-create .lm-check { color: var(--accent); }
 
     .checked-section {
       border-top: 2px solid var(--border);
@@ -1833,12 +1835,52 @@ function highlightMpItem(items) {
 
 // ─── Label modal search ───
 function filterLabelModal() {
-  const query = document.getElementById('label-search-input').value.trim().toLowerCase();
-  const items = document.querySelectorAll('#label-modal-list .label-modal-item');
+  const query = document.getElementById('label-search-input').value.trim();
+  const queryLower = query.toLowerCase();
+  const items = document.querySelectorAll('#label-modal-list .label-modal-item:not(.lm-create)');
+  let exactMatch = false;
   items.forEach(el => {
-    const name = el.textContent.toLowerCase();
-    el.style.display = name.includes(query) ? '' : 'none';
+    const name = el.textContent.toLowerCase().trim();
+    const matches = name.includes(queryLower);
+    el.style.display = matches ? '' : 'none';
+    if (matches && name.replace('✓', '').trim() === queryLower) exactMatch = true;
   });
+  // Show or hide the "create" option
+  let createEl = document.querySelector('#label-modal-list .lm-create');
+  if (query.length >= 2 && !exactMatch) {
+    if (!createEl) {
+      createEl = document.createElement('div');
+      createEl.className = 'label-modal-item lm-create';
+      document.getElementById('label-modal-list').appendChild(createEl);
+    }
+    createEl.innerHTML = `<span class="lm-check">+</span> Create "${escHtml(query)}"`;
+    createEl.onclick = () => createLabel(query);
+    createEl.style.display = '';
+  } else if (createEl) {
+    createEl.style.display = 'none';
+  }
+}
+
+async function createLabel(name) {
+  try {
+    const newLabel = await api('/groups/labels', {
+      method: 'POST',
+      body: { name },
+    });
+    // Add to local state
+    allLabels.push(newLabel);
+    labelMap[newLabel.id] = newLabel;
+    populateCategoryOverride();
+    toast(`Created "${name}"`);
+    // Apply the new label to the item being edited
+    if (labelEditItemId) {
+      setItemLabel(newLabel.id);
+    } else {
+      closeLabelModal();
+    }
+  } catch (err) {
+    toast('Failed to create category');
+  }
 }
 
 // ─── Icons ───
