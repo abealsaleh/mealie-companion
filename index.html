@@ -793,7 +793,7 @@
       <div class="form-row">
         <div class="form-group">
           <label>Date</label>
-          <input type="date" id="mp-date">
+          <select id="mp-date"></select>
         </div>
         <div class="form-group">
           <label>Meal</label>
@@ -920,7 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     init();
   }
-  document.getElementById('mp-date').value = todayStr();
+  populateDatePicker();
   setupPullToRefresh();
   document.getElementById('add-item-input').addEventListener('keydown', (e) => {
     const dropdown = document.getElementById('autocomplete-dropdown');
@@ -1136,6 +1136,19 @@ function restoreActiveTab() {
 function todayStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function populateDatePicker() {
+  const sel = document.getElementById('mp-date');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  sel.innerHTML = '';
+  for (let i = 0; i < PLAN_DAYS; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const val = formatDateParam(d);
+    const label = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : DAY_NAMES[d.getDay()];
+    sel.innerHTML += `<option value="${val}">${label} – ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}</option>`;
+  }
 }
 function toast(msg) {
   const el = document.getElementById('toast');
