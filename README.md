@@ -58,11 +58,11 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 
 ### Meal Plan
 
-- **8-day rolling view**: shows today through 7 days ahead in the left column
+- **8-day rolling view**: shows today through 7 days ahead in the left column, with refresh button
 - **Quick add** (right column): auto-detects URLs vs recipe names
 - **Recipe search**: searches existing recipes with keyboard navigation (arrow keys + Enter)
 - **URL import**: imports recipes from URLs via Mealie's scraper
-- **Date picker** (defaults to today) and **meal type selector** (defaults to dinner)
+- **Day-of-week date picker** (defaults to today, shows "Today", "Tomorrow", day names with dates) and **meal type selector** (defaults to dinner)
 - **Delete entries**: remove meals directly from the plan view
 - Two-column layout on desktop, stacked on mobile
 
