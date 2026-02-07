@@ -152,6 +152,90 @@
     /* --- Meal Plan Tab --- */
     #mealplan-tab .scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
+    .mp-week-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .mp-week-nav .week-label { font-weight: 600; font-size: 15px; }
+    .mp-week-nav button {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+    }
+    .mp-week-nav button:active { background: var(--surface2); }
+
+    .mp-day {
+      border-bottom: 1px solid var(--border);
+    }
+    .mp-day-header {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
+      background: var(--surface2);
+      font-weight: 600;
+      font-size: 14px;
+      position: sticky;
+      top: 48px;
+      z-index: 5;
+      border-bottom: 1px solid var(--border);
+    }
+    .mp-day-header .day-name { flex: 1; }
+    .mp-day-header .day-date { color: var(--text-muted); font-weight: 400; font-size: 13px; }
+    .mp-day-header.today { color: var(--accent); }
+    .mp-day-header.today .day-date { color: var(--accent); }
+
+    .mp-meal-group {
+      padding: 6px 16px 6px 32px;
+    }
+    .mp-meal-type {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      padding: 6px 0 2px;
+    }
+    .mp-entry {
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .mp-entry:last-child { border-bottom: none; }
+    .mp-entry-icon { color: var(--accent); flex-shrink: 0; }
+    .mp-entry-name { flex: 1; font-size: 15px; }
+    .mp-entry-delete {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+    }
+    .mp-entry-delete:active { background: var(--surface2); color: var(--accent); }
+
+    .mp-day-empty {
+      padding: 10px 16px 10px 32px;
+      color: var(--text-dim);
+      font-size: 13px;
+      font-style: italic;
+    }
+
     .input-hint {
       font-size: 12px;
       color: var(--text-dim);
@@ -499,6 +583,9 @@
           <option value="lunch">Lunch</option>
           <option value="dinner" selected>Dinner</option>
           <option value="side">Side</option>
+          <option value="snack">Snack</option>
+          <option value="dessert">Dessert</option>
+          <option value="drink">Drink</option>
         </select>
       </div>
     </div>
@@ -514,6 +601,16 @@
     </div>
 
     <div id="mp-results"></div>
+
+    <div class="mp-week-nav">
+      <button onclick="shiftWeek(-1)"><i data-lucide="chevron-left" style="width:16px;height:16px"></i></button>
+      <span class="week-label" id="mp-week-label">This Week</span>
+      <button onclick="shiftWeek(1)"><i data-lucide="chevron-right" style="width:16px;height:16px"></i></button>
+    </div>
+
+    <div id="mp-plan-content">
+      <div class="loading-bar visible"><span class="spinner"></span> Loading meal plan...</div>
+    </div>
   </div>
 </div>
 
@@ -562,6 +659,7 @@ let selectedFood = null; // {id, name, labelId} from autocomplete
 let searchTimeout = null;
 let acSearchTimeout = null;
 let refreshTimer = null;
+let weekOffset = 0; // 0 = this week, -1 = last week, etc.
 
 // ─── Init ───
 document.addEventListener('DOMContentLoaded', () => {
@@ -571,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
   }
   document.getElementById('mp-date').value = todayStr();
+  document.getElementById('mp-week-label').textContent = getWeekLabel(0);
   setupPullToRefresh();
   document.getElementById('add-item-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') addItemFromInput();
@@ -593,7 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function init() {
   hideSetup();
   try {
-    await Promise.all([loadLabels(), loadShoppingLists()]);
+    await Promise.all([loadLabels(), loadShoppingLists(), loadMealPlan()]);
     populateCategoryOverride();
   } catch (err) {
     console.error('Init error:', err);
@@ -786,6 +885,134 @@ function escHtml(s) {
 // ─── MEAL PLAN TAB ───
 // ═══════════════════════════════════
 
+const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'side', 'snack', 'dessert', 'drink'];
+const MEAL_ICONS = {
+  breakfast: 'sunrise', lunch: 'sun', dinner: 'moon', side: 'salad',
+  snack: 'cookie', dessert: 'cake-slice', drink: 'cup-soda',
+};
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function getWeekRange(offset) {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const start = new Date(now);
+  start.setDate(now.getDate() - day + (offset * 7));
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return { start, end };
+}
+
+function formatDateParam(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function getWeekLabel(offset) {
+  if (offset === 0) return 'This Week';
+  if (offset === -1) return 'Last Week';
+  if (offset === 1) return 'Next Week';
+  const { start, end } = getWeekRange(offset);
+  return `${MONTH_SHORT[start.getMonth()]} ${start.getDate()} – ${MONTH_SHORT[end.getMonth()]} ${end.getDate()}`;
+}
+
+function shiftWeek(dir) {
+  weekOffset += dir;
+  document.getElementById('mp-week-label').textContent = getWeekLabel(weekOffset);
+  loadMealPlan();
+}
+
+async function loadMealPlan() {
+  const { start, end } = getWeekRange(weekOffset);
+  const content = document.getElementById('mp-plan-content');
+  content.innerHTML = '<div class="loading-bar visible"><span class="spinner"></span> Loading...</div>';
+
+  try {
+    const data = await api(`/households/mealplans?start_date=${formatDateParam(start)}&end_date=${formatDateParam(end)}&perPage=50&page=1`);
+    const entries = data.items || [];
+    renderMealPlan(start, entries);
+  } catch (err) {
+    content.innerHTML = '<div class="empty-state">Failed to load meal plan</div>';
+  }
+}
+
+function renderMealPlan(weekStart, entries) {
+  const content = document.getElementById('mp-plan-content');
+  const todayS = todayStr();
+
+  // Group entries by date
+  const byDate = {};
+  entries.forEach(e => {
+    if (!byDate[e.date]) byDate[e.date] = [];
+    byDate[e.date].push(e);
+  });
+
+  let html = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const dateStr = formatDateParam(d);
+    const isToday = dateStr === todayS;
+    const dayEntries = byDate[dateStr] || [];
+
+    html += `<div class="mp-day">`;
+    html += `<div class="mp-day-header ${isToday ? 'today' : ''}">
+      <span class="day-name">${isToday ? 'Today' : DAY_NAMES[d.getDay()]}</span>
+      <span class="day-date">${MONTH_SHORT[d.getMonth()]} ${d.getDate()}</span>
+    </div>`;
+
+    if (dayEntries.length === 0) {
+      html += `<div class="mp-day-empty">No meals planned</div>`;
+    } else {
+      // Group by meal type, sorted
+      const byMeal = {};
+      dayEntries.forEach(e => {
+        const type = e.entryType || 'dinner';
+        if (!byMeal[type]) byMeal[type] = [];
+        byMeal[type].push(e);
+      });
+
+      const sortedMeals = Object.keys(byMeal).sort((a, b) =>
+        MEAL_ORDER.indexOf(a) - MEAL_ORDER.indexOf(b)
+      );
+
+      html += '<div class="mp-meal-group">';
+      sortedMeals.forEach(mealType => {
+        html += `<div class="mp-meal-type">${escHtml(mealType)}</div>`;
+        byMeal[mealType].forEach(entry => {
+          const name = entry.recipe?.name || entry.title || '(untitled)';
+          const icon = MEAL_ICONS[mealType] || 'utensils';
+          html += `
+            <div class="mp-entry">
+              <span class="mp-entry-icon"><i data-lucide="${icon}" style="width:16px;height:16px"></i></span>
+              <span class="mp-entry-name">${escHtml(name)}</span>
+              <button class="mp-entry-delete" onclick="event.stopPropagation();deleteMealEntry(${entry.id})" title="Remove">
+                <i data-lucide="x" style="width:14px;height:14px"></i>
+              </button>
+            </div>
+          `;
+        });
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  content.innerHTML = html;
+  initIcons();
+}
+
+async function deleteMealEntry(entryId) {
+  try {
+    await api(`/households/mealplans/${entryId}`, { method: 'DELETE' });
+    toast('Removed from meal plan');
+    loadMealPlan();
+  } catch (err) {
+    toast('Failed to remove entry');
+  }
+}
+
 function onMpInput() {
   const val = document.getElementById('mp-input').value.trim();
   const resultsEl = document.getElementById('mp-search-results');
@@ -841,24 +1068,20 @@ async function submitMealPlan() {
     let slug, recipeId, recipeName;
 
     if (isUrl(val)) {
-      // Import from URL
       loading.querySelector('span').nextSibling.textContent = ' Importing from URL...';
       const result = await api('/recipes/create/url', { method: 'POST', body: { url: val, includeTags: false } });
       slug = typeof result === 'string' ? result : result.slug || result;
-      // Strip surrounding quotes if present
       if (typeof slug === 'string') slug = slug.replace(/^"|"$/g, '');
       const recipe = await api(`/recipes/${slug}`);
       recipeId = recipe.id;
       recipeName = recipe.name;
     } else if (input.dataset.selectedSlug) {
-      // Selected from search
       slug = input.dataset.selectedSlug;
       const recipe = await api(`/recipes/${slug}`);
       recipeId = recipe.id;
       recipeName = recipe.name;
       delete input.dataset.selectedSlug;
     } else {
-      // Create new recipe by name
       loading.querySelector('span').nextSibling.textContent = ' Creating recipe...';
       const result = await api('/recipes', { method: 'POST', body: { name: val } });
       slug = typeof result === 'string' ? result : result.slug || result;
@@ -868,33 +1091,22 @@ async function submitMealPlan() {
       recipeName = recipe.name;
     }
 
-    // Add to meal plan
     loading.querySelector('span').nextSibling.textContent = ' Adding to meal plan...';
     await api('/households/mealplans', {
       method: 'POST',
       body: { date, entryType, recipeId },
     });
 
-    showMealPlanResult(recipeName, slug, date, entryType);
     input.value = '';
     document.getElementById('mp-search-results').style.display = 'none';
+    toast(`Added "${recipeName}" to ${entryType}`);
+    loadMealPlan();
   } catch (err) {
     showMealPlanError(err.message);
   } finally {
     btn.disabled = false;
     loading.classList.remove('visible');
   }
-}
-
-function showMealPlanResult(name, slug, date, meal) {
-  const el = document.getElementById('mp-results');
-  el.innerHTML = `
-    <div class="result-card">
-      <h3><i data-lucide="circle-check" style="width:16px;height:16px;vertical-align:-3px;color:var(--success)"></i> Added to ${meal}</h3>
-      <p>${escHtml(name)} on ${date}</p>
-    </div>
-  ` + el.innerHTML;
-  initIcons();
 }
 
 function showMealPlanError(msg) {
@@ -904,8 +1116,9 @@ function showMealPlanError(msg) {
       <h3><i data-lucide="circle-x" style="width:16px;height:16px;vertical-align:-3px;color:var(--accent)"></i> Error</h3>
       <p>${escHtml(msg)}</p>
     </div>
-  ` + el.innerHTML;
+  `;
   initIcons();
+  setTimeout(() => { el.innerHTML = ''; }, 4000);
 }
 
 // ═══════════════════════════════════
