@@ -433,19 +433,24 @@
 </head>
 <body>
 
-<button class="settings-btn" onclick="showSetup()" title="Settings">⚙</button>
+<button class="settings-btn" onclick="logout()" title="Sign out">⏻</button>
 
 <nav>
   <button class="active" onclick="switchTab('mealplan')">Meal Plan</button>
   <button onclick="switchTab('shopping')">Shopping</button>
 </nav>
 
-<!-- Setup / Settings -->
+<!-- Login screen -->
 <div id="setup">
-  <h2>Setup</h2>
-  <p>Enter your Mealie API token. Generate one in Mealie under User &gt; API Tokens.</p>
-  <input type="text" id="api-token-input" placeholder="API Token (e.g. ey...)" autocomplete="off">
-  <button class="btn btn-primary" onclick="saveSettings()">Save &amp; Connect</button>
+  <h2>Sign In</h2>
+  <p>Log in with your Mealie account.</p>
+  <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+  <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
+  <label style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:14px;width:100%;max-width:400px">
+    <input type="checkbox" id="login-remember" checked> Remember me
+  </label>
+  <button class="btn btn-primary" onclick="doLogin()" id="login-btn">Sign In</button>
+  <div id="login-error" style="color:var(--accent);font-size:14px;display:none"></div>
   <button class="btn btn-outline btn-sm" onclick="hideSetup()" style="margin-top:8px">Cancel</button>
 </div>
 
@@ -525,7 +530,7 @@
 
 <script>
 // ─── State ───
-let apiToken = localStorage.getItem('mealie_token') || '';
+let accessToken = sessionStorage.getItem('mealie_access_token') || '';
 let shoppingLists = [];
 let activeListId = localStorage.getItem('mealie_active_list') || '';
 let activeListItems = [];
@@ -535,10 +540,11 @@ let prevBoughtItems = []; // cached autocomplete source
 let prevBoughtListId = null;
 let selectedAutocomplete = null; // {note, labelId}
 let searchTimeout = null;
+let refreshTimer = null;
 
 // ─── Init ───
 document.addEventListener('DOMContentLoaded', () => {
-  if (!apiToken) {
+  if (!accessToken) {
     showSetup();
   } else {
     init();
@@ -551,6 +557,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('mp-input').addEventListener('input', onMpInput);
   document.getElementById('mp-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') submitMealPlan();
+  });
+  document.getElementById('login-password').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doLogin();
   });
   // Close autocomplete on outside tap
   document.addEventListener('click', (e) => {
@@ -568,7 +577,18 @@ async function init() {
     await findPreviouslyBoughtList();
   } catch (err) {
     console.error('Init error:', err);
-    toast('Connection error - check settings');
+    if (err.message && err.message.includes('401')) {
+      // Token expired, try refresh
+      const refreshed = await tryRefreshToken();
+      if (refreshed) {
+        init();
+        return;
+      }
+      logout();
+      toast('Session expired - please sign in again');
+    } else {
+      toast('Connection error');
+    }
   }
 }
 
@@ -577,13 +597,39 @@ async function api(path, opts = {}) {
   const resp = await fetch('/api' + path, {
     ...opts,
     headers: {
-      'Authorization': 'Bearer ' + apiToken,
+      'Authorization': 'Bearer ' + accessToken,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       ...(opts.headers || {}),
     },
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
+  if (resp.status === 401) {
+    // Try token refresh once
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      // Retry the original request with new token
+      const retry = await fetch('/api' + path, {
+        ...opts,
+        headers: {
+          'Authorization': 'Bearer ' + accessToken,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(opts.headers || {}),
+        },
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+      });
+      if (!retry.ok) {
+        const text = await retry.text();
+        throw new Error(`API ${retry.status}: ${text}`);
+      }
+      const ct = retry.headers.get('content-type');
+      return ct && ct.includes('application/json') ? retry.json() : retry.text();
+    }
+    logout();
+    toast('Session expired - please sign in again');
+    throw new Error('API 401: Unauthorized');
+  }
   if (!resp.ok) {
     const text = await resp.text();
     throw new Error(`API ${resp.status}: ${text}`);
@@ -595,21 +641,98 @@ async function api(path, opts = {}) {
   return resp.text();
 }
 
-// ─── Settings ───
+// ─── Auth ───
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const remember = document.getElementById('login-remember').checked;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+
+  if (!email || !password) {
+    errEl.textContent = 'Please enter email and password';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+  errEl.style.display = 'none';
+
+  try {
+    const body = new URLSearchParams();
+    body.append('username', email);
+    body.append('password', password);
+    body.append('remember_me', remember.toString());
+
+    const resp = await fetch('/api/auth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body,
+    });
+
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      throw new Error(data.detail || 'Invalid email or password');
+    }
+
+    const data = await resp.json();
+    accessToken = data.access_token;
+    sessionStorage.setItem('mealie_access_token', accessToken);
+    scheduleTokenRefresh();
+    document.getElementById('login-password').value = '';
+    toast('Signed in');
+    init();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+async function tryRefreshToken() {
+  try {
+    const resp = await fetch('/api/auth/refresh', {
+      headers: { 'Authorization': 'Bearer ' + accessToken },
+    });
+    if (!resp.ok) return false;
+    const data = await resp.json();
+    accessToken = data.access_token;
+    sessionStorage.setItem('mealie_access_token', accessToken);
+    scheduleTokenRefresh();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function scheduleTokenRefresh() {
+  clearTimeout(refreshTimer);
+  // Refresh every 20 minutes (tokens typically expire in ~30 min)
+  refreshTimer = setTimeout(async () => {
+    const ok = await tryRefreshToken();
+    if (!ok) {
+      logout();
+      toast('Session expired - please sign in again');
+    }
+  }, 20 * 60 * 1000);
+}
+
+function logout() {
+  accessToken = '';
+  sessionStorage.removeItem('mealie_access_token');
+  clearTimeout(refreshTimer);
+  showSetup();
+}
+
 function showSetup() {
   document.getElementById('setup').classList.add('active');
-  document.getElementById('api-token-input').value = apiToken;
+  document.getElementById('login-error').style.display = 'none';
 }
 function hideSetup() {
   document.getElementById('setup').classList.remove('active');
-}
-function saveSettings() {
-  const token = document.getElementById('api-token-input').value.trim();
-  if (!token) return toast('Please enter an API token');
-  apiToken = token;
-  localStorage.setItem('mealie_token', token);
-  toast('Settings saved');
-  init();
 }
 
 // ─── Tab switching ───
