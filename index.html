@@ -97,8 +97,14 @@
       gap: 16px;
     }
     #setup.active { display: flex; }
-    #setup h2 { font-size: 22px; margin-bottom: 8px; }
-    #setup p { color: var(--text-muted); text-align: center; font-size: 14px; max-width: 340px; }
+    #setup form {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+    }
+    #setup h2 { font-size: 22px; margin-bottom: 0; }
     #setup input[type="email"], #setup input[type="password"] {
       width: 100%;
       max-width: 400px;
@@ -639,17 +645,19 @@
 
 <!-- Login screen -->
 <div id="setup">
-  <div style="font-size:48px;margin-bottom:8px"><i data-lucide="chef-hat" style="width:48px;height:48px;color:var(--accent)"></i></div>
-  <h2>Sign In</h2>
-  <p>Log in with your Mealie account.</p>
-  <input type="email" id="login-email" placeholder="Email" autocomplete="email">
-  <input type="password" id="login-password" placeholder="Password" autocomplete="current-password">
-  <label style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:14px;width:100%;max-width:400px">
-    <input type="checkbox" id="login-remember" checked> Remember me
-  </label>
-  <button class="btn btn-primary" onclick="doLogin()" id="login-btn">Sign In</button>
-  <div id="login-error" style="color:var(--accent);font-size:14px;display:none"></div>
-  <button class="btn btn-outline btn-sm" onclick="hideSetup()" style="margin-top:8px">Cancel</button>
+  <form id="login-form" action="#" method="post" onsubmit="event.preventDefault();doLogin()">
+    <div style="font-size:48px;margin-bottom:8px;text-align:center"><i data-lucide="chef-hat" style="width:48px;height:48px;color:var(--accent)"></i></div>
+    <h2 style="text-align:center">Sign In</h2>
+    <p style="color:var(--text-muted);text-align:center;font-size:14px;max-width:340px;margin:0 auto 16px">Log in with your Mealie account.</p>
+    <input type="email" id="login-email" name="email" placeholder="Email" autocomplete="username email">
+    <input type="password" id="login-password" name="password" placeholder="Password" autocomplete="current-password">
+    <label style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:14px;width:100%;max-width:400px">
+      <input type="checkbox" id="login-remember" name="remember" checked> Remember me
+    </label>
+    <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
+    <div id="login-error" style="color:var(--accent);font-size:14px;display:none"></div>
+    <button type="button" class="btn btn-outline btn-sm" onclick="hideSetup()" style="margin-top:8px">Cancel</button>
+  </form>
 </div>
 
 <!-- Meal Plan Tab -->
@@ -799,9 +807,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.key === 'Escape') { resultsEl.style.display = 'none'; mpKbIndex = -1; return; }
     }
     if (e.key === 'Enter') submitMealPlan();
-  });
-  document.getElementById('login-password').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') doLogin();
   });
   // Close autocomplete on outside tap
   document.addEventListener('click', (e) => {
