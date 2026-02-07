@@ -1,0 +1,21 @@
+services:
+  mealie-companion:
+    image: nginx:alpine
+    container_name: mealie-companion
+    restart: unless-stopped
+    ports:
+      - "9944:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./manifest.json:/usr/share/nginx/html/manifest.json:ro
+      - ./sw.js:/usr/share/nginx/html/sw.js:ro
+      - ./nginx.conf:/etc/nginx/templates/default.conf.template:ro
+    environment:
+      - MEALIE_HOST=mealie
+      - MEALIE_PORT=9000
+    networks:
+      - mealie_default
+
+networks:
+  mealie_default:
+    external: true

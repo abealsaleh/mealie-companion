@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#e94560">
+  <link rel="manifest" href="/manifest.json">
+  <title>Mealie Companion</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #1a1a2e;
+      --surface: #16213e;
+      --surface2: #0f3460;
+      --accent: #e94560;
+      --accent-hover: #d63851;
+      --text: #eee;
+      --text-muted: #999;
+      --text-dim: #666;
+      --success: #4caf50;
+      --border: #2a2a4a;
+      --radius: 10px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+    }
+
+    /* --- Nav Tabs --- */
+    nav {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    nav button {
+      flex: 1;
+      padding: 14px 0;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    nav button.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* --- Tabs content --- */
+    .tab { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+    .tab.active { display: flex; }
+
+    /* --- Setup screen --- */
+    #setup {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 24px;
+      gap: 16px;
+    }
+    #setup.active { display: flex; }
+    #setup h2 { font-size: 22px; margin-bottom: 8px; }
+    #setup p { color: var(--text-muted); text-align: center; font-size: 14px; max-width: 340px; }
+    #setup input {
+      width: 100%;
+      max-width: 400px;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 16px;
+    }
+    #setup input:focus { outline: none; border-color: var(--accent); }
+
+    /* --- Common form elements --- */
+    .form-group { padding: 16px; }
+    .form-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 16px;
+      -webkit-appearance: none;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+    .form-row { display: flex; gap: 12px; padding: 0 16px 16px; }
+    .form-row .form-group { padding: 0; flex: 1; }
+
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='2' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px !important; }
+
+    /* --- Buttons --- */
+    .btn {
+      padding: 14px 24px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-outline {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .btn-sm { padding: 8px 16px; font-size: 14px; }
+    .btn-danger { background: #c0392b; color: white; }
+
+    /* --- Meal Plan Tab --- */
+    #mealplan-tab .scroll-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    .input-hint {
+      font-size: 12px;
+      color: var(--text-dim);
+      padding: 0 16px 12px;
+    }
+
+    .result-card {
+      margin: 0 16px 16px;
+      padding: 16px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border-left: 4px solid var(--success);
+    }
+    .result-card.error { border-left-color: var(--accent); }
+    .result-card h3 { font-size: 15px; margin-bottom: 4px; }
+    .result-card p { font-size: 13px; color: var(--text-muted); }
+    .result-card a { color: var(--accent); text-decoration: none; }
+
+    .search-results {
+      margin: 0 16px 16px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .search-results .item {
+      padding: 12px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .search-results .item:last-child { border-bottom: none; }
+    .search-results .item:active { background: var(--surface2); }
+    .search-results .item .slug { font-size: 12px; color: var(--text-dim); }
+
+    /* loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid var(--text-muted);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-bar {
+      display: none;
+      padding: 16px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .loading-bar.visible { display: block; }
+
+    /* --- Shopping Tab --- */
+    #shopping-tab .list-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #shopping-tab .list-header select { flex: 1; }
+    #shopping-tab .list-header .btn { flex-shrink: 0; }
+
+    .add-bar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      position: relative;
+    }
+    .add-bar input { flex: 1; }
+    .add-bar .btn { flex-shrink: 0; }
+
+    .autocomplete-dropdown {
+      display: none;
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      top: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 0 0 var(--radius) var(--radius);
+      max-height: 280px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .autocomplete-dropdown.visible { display: block; }
+    .autocomplete-dropdown .ac-item {
+      padding: 12px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+    }
+    .autocomplete-dropdown .ac-item:active { background: var(--surface); }
+    .autocomplete-dropdown .ac-item .ac-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-left: 8px;
+    }
+    .autocomplete-dropdown .ac-item.ac-new {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .category-select-bar {
+      display: none;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      align-items: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .category-select-bar.visible { display: flex; }
+    .category-select-bar select { flex: 1; font-size: 14px; }
+
+    .shopping-scroll {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 20px;
+    }
+
+    .category-group { margin-bottom: 4px; }
+    .category-header {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
+      background: var(--surface);
+      cursor: pointer;
+      user-select: none;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--border);
+    }
+    .category-header .arrow {
+      margin-right: 10px;
+      font-size: 12px;
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+    .category-header.collapsed .arrow { transform: rotate(-90deg); }
+    .category-header .cat-name { font-weight: 600; font-size: 14px; }
+    .category-header .cat-count {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text-dim);
+      background: var(--border);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .category-items { overflow: hidden; }
+    .category-header.collapsed + .category-items { display: none; }
+
+    .shop-item {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+      min-height: 48px;
+    }
+    .shop-item:active { background: var(--surface); }
+    .shop-item .check-circle {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      margin-right: 14px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .shop-item.checked .check-circle {
+      background: var(--success);
+      border-color: var(--success);
+    }
+    .shop-item.checked .check-circle::after {
+      content: "✓";
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .shop-item .item-text { flex: 1; font-size: 15px; }
+    .shop-item .item-qty {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-left: 8px;
+    }
+    .shop-item.checked .item-text {
+      text-decoration: line-through;
+      color: var(--text-dim);
+    }
+    .shop-item .delete-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 18px;
+      padding: 4px 8px;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    .shop-item.checked .delete-btn { display: block; }
+
+    .checked-section {
+      border-top: 2px solid var(--border);
+      margin-top: 8px;
+    }
+    .checked-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .checked-header .btn { text-transform: none; letter-spacing: 0; }
+
+    /* --- Settings gear --- */
+    .settings-btn {
+      position: fixed;
+      top: var(--safe-top);
+      right: 12px;
+      margin-top: 10px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 50;
+      padding: 4px;
+    }
+
+    /* --- Toast notification --- */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface2);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 200;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* --- Pull to refresh --- */
+    .pull-indicator {
+      text-align: center;
+      padding: 12px;
+      color: var(--text-muted);
+      font-size: 13px;
+      display: none;
+    }
+
+    /* --- Empty state --- */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-dim);
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+
+<button class="settings-btn" onclick="showSetup()" title="Settings">⚙</button>
+
+<nav>
+  <button class="active" onclick="switchTab('mealplan')">Meal Plan</button>
+  <button onclick="switchTab('shopping')">Shopping</button>
+</nav>
+
+<!-- Setup / Settings -->
+<div id="setup">
+  <h2>Setup</h2>
+  <p>Enter your Mealie API token. Generate one in Mealie under User &gt; API Tokens.</p>
+  <input type="text" id="api-token-input" placeholder="API Token (e.g. ey...)" autocomplete="off">
+  <button class="btn btn-primary" onclick="saveSettings()">Save &amp; Connect</button>
+  <button class="btn btn-outline btn-sm" onclick="hideSetup()" style="margin-top:8px">Cancel</button>
+</div>
+
+<!-- Meal Plan Tab -->
+<div id="mealplan-tab" class="tab active">
+  <div class="scroll-area">
+    <div class="form-group">
+      <label>Recipe name or URL</label>
+      <input type="text" id="mp-input" placeholder="Paste URL or type recipe name..." autocomplete="off">
+    </div>
+    <div class="input-hint">Paste a URL to import, or type to search existing recipes</div>
+
+    <div id="mp-search-results" class="search-results" style="display:none"></div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="mp-date">
+      </div>
+      <div class="form-group">
+        <label>Meal</label>
+        <select id="mp-meal">
+          <option value="breakfast">Breakfast</option>
+          <option value="lunch">Lunch</option>
+          <option value="dinner" selected>Dinner</option>
+          <option value="side">Side</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="padding: 0 16px 16px">
+      <button class="btn btn-primary" style="width:100%" id="mp-submit" onclick="submitMealPlan()">
+        Add to Meal Plan
+      </button>
+    </div>
+
+    <div id="mp-loading" class="loading-bar">
+      <span class="spinner"></span> Working...
+    </div>
+
+    <div id="mp-results"></div>
+  </div>
+</div>
+
+<!-- Shopping Tab -->
+<div id="shopping-tab" class="tab">
+  <div class="list-header">
+    <select id="list-selector" onchange="selectList(this.value)">
+      <option value="">Loading lists...</option>
+    </select>
+    <button class="btn btn-outline btn-sm" onclick="refreshList()">↻</button>
+  </div>
+
+  <div class="add-bar">
+    <input type="text" id="add-item-input" placeholder="Add an item..." autocomplete="off"
+           oninput="onAddItemInput()" onfocus="onAddItemInput()">
+    <button class="btn btn-primary btn-sm" onclick="addItemFromInput()">Add</button>
+    <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
+  </div>
+
+  <div class="category-select-bar" id="category-select-bar">
+    <span>Category:</span>
+    <select id="category-override">
+      <option value="">Auto</option>
+    </select>
+  </div>
+
+  <div class="shopping-scroll" id="shopping-scroll">
+    <div class="pull-indicator" id="pull-indicator">↓ Pull to refresh</div>
+    <div id="shopping-content">
+      <div class="empty-state">Select a shopping list to get started</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ───
+let apiToken = localStorage.getItem('mealie_token') || '';
+let shoppingLists = [];
+let activeListId = localStorage.getItem('mealie_active_list') || '';
+let activeListItems = [];
+let allLabels = [];
+let labelMap = {};  // id → {name, ...}
+let prevBoughtItems = []; // cached autocomplete source
+let prevBoughtListId = null;
+let selectedAutocomplete = null; // {note, labelId}
+let searchTimeout = null;
+
+// ─── Init ───
+document.addEventListener('DOMContentLoaded', () => {
+  if (!apiToken) {
+    showSetup();
+  } else {
+    init();
+  }
+  document.getElementById('mp-date').value = todayStr();
+  setupPullToRefresh();
+  document.getElementById('add-item-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addItemFromInput();
+  });
+  document.getElementById('mp-input').addEventListener('input', onMpInput);
+  document.getElementById('mp-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitMealPlan();
+  });
+  // Close autocomplete on outside tap
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.add-bar')) {
+      document.getElementById('autocomplete-dropdown').classList.remove('visible');
+    }
+  });
+});
+
+async function init() {
+  hideSetup();
+  try {
+    await Promise.all([loadLabels(), loadShoppingLists()]);
+    populateCategoryOverride();
+    await findPreviouslyBoughtList();
+  } catch (err) {
+    console.error('Init error:', err);
+    toast('Connection error - check settings');
+  }
+}
+
+// ─── API helper ───
+async function api(path, opts = {}) {
+  const resp = await fetch('/api' + path, {
+    ...opts,
+    headers: {
+      'Authorization': 'Bearer ' + apiToken,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(opts.headers || {}),
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`API ${resp.status}: ${text}`);
+  }
+  const contentType = resp.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return resp.json();
+  }
+  return resp.text();
+}
+
+// ─── Settings ───
+function showSetup() {
+  document.getElementById('setup').classList.add('active');
+  document.getElementById('api-token-input').value = apiToken;
+}
+function hideSetup() {
+  document.getElementById('setup').classList.remove('active');
+}
+function saveSettings() {
+  const token = document.getElementById('api-token-input').value.trim();
+  if (!token) return toast('Please enter an API token');
+  apiToken = token;
+  localStorage.setItem('mealie_token', token);
+  toast('Settings saved');
+  init();
+}
+
+// ─── Tab switching ───
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(name + '-tab').classList.add('active');
+  document.querySelector(`nav button[onclick*="${name}"]`).classList.add('active');
+  if (name === 'shopping' && activeListId) refreshList();
+}
+
+// ─── Helpers ───
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 2500);
+}
+function isUrl(s) {
+  return /^https?:\/\//i.test(s.trim());
+}
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════
+// ─── MEAL PLAN TAB ───
+// ═══════════════════════════════════
+
+function onMpInput() {
+  const val = document.getElementById('mp-input').value.trim();
+  const resultsEl = document.getElementById('mp-search-results');
+  if (isUrl(val) || val.length < 2) {
+    resultsEl.style.display = 'none';
+    return;
+  }
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => searchRecipes(val), 300);
+}
+
+async function searchRecipes(query) {
+  const resultsEl = document.getElementById('mp-search-results');
+  try {
+    const data = await api(`/recipes?search=${encodeURIComponent(query)}&perPage=5&page=1`);
+    const items = data.items || [];
+    if (items.length === 0) {
+      resultsEl.style.display = 'none';
+      return;
+    }
+    resultsEl.innerHTML = items.map(r => `
+      <div class="item" onclick="selectRecipe('${escHtml(r.slug)}', '${escHtml(r.name)}')">
+        ${escHtml(r.name)}
+        <div class="slug">${escHtml(r.slug)}</div>
+      </div>
+    `).join('');
+    resultsEl.style.display = 'block';
+  } catch (e) {
+    resultsEl.style.display = 'none';
+  }
+}
+
+function selectRecipe(slug, name) {
+  document.getElementById('mp-input').value = name;
+  document.getElementById('mp-input').dataset.selectedSlug = slug;
+  document.getElementById('mp-search-results').style.display = 'none';
+}
+
+async function submitMealPlan() {
+  const input = document.getElementById('mp-input');
+  const val = input.value.trim();
+  if (!val) return;
+
+  const date = document.getElementById('mp-date').value;
+  const entryType = document.getElementById('mp-meal').value;
+  const btn = document.getElementById('mp-submit');
+  const loading = document.getElementById('mp-loading');
+
+  btn.disabled = true;
+  loading.classList.add('visible');
+
+  try {
+    let slug, recipeId, recipeName;
+
+    if (isUrl(val)) {
+      // Import from URL
+      loading.querySelector('span').nextSibling.textContent = ' Importing from URL...';
+      const result = await api('/recipes/create/url', { method: 'POST', body: { url: val, includeTags: false } });
+      slug = typeof result === 'string' ? result : result.slug || result;
+      // Strip surrounding quotes if present
+      if (typeof slug === 'string') slug = slug.replace(/^"|"$/g, '');
+      const recipe = await api(`/recipes/${slug}`);
+      recipeId = recipe.id;
+      recipeName = recipe.name;
+    } else if (input.dataset.selectedSlug) {
+      // Selected from search
+      slug = input.dataset.selectedSlug;
+      const recipe = await api(`/recipes/${slug}`);
+      recipeId = recipe.id;
+      recipeName = recipe.name;
+      delete input.dataset.selectedSlug;
+    } else {
+      // Create new recipe by name
+      loading.querySelector('span').nextSibling.textContent = ' Creating recipe...';
+      const result = await api('/recipes', { method: 'POST', body: { name: val } });
+      slug = typeof result === 'string' ? result : result.slug || result;
+      if (typeof slug === 'string') slug = slug.replace(/^"|"$/g, '');
+      const recipe = await api(`/recipes/${slug}`);
+      recipeId = recipe.id;
+      recipeName = recipe.name;
+    }
+
+    // Add to meal plan
+    loading.querySelector('span').nextSibling.textContent = ' Adding to meal plan...';
+    await api('/households/mealplans', {
+      method: 'POST',
+      body: { date, entryType, recipeId },
+    });
+
+    showMealPlanResult(recipeName, slug, date, entryType);
+    input.value = '';
+    document.getElementById('mp-search-results').style.display = 'none';
+  } catch (err) {
+    showMealPlanError(err.message);
+  } finally {
+    btn.disabled = false;
+    loading.classList.remove('visible');
+  }
+}
+
+function showMealPlanResult(name, slug, date, meal) {
+  const el = document.getElementById('mp-results');
+  el.innerHTML = `
+    <div class="result-card">
+      <h3>✓ Added to ${meal}</h3>
+      <p>${escHtml(name)} on ${date}</p>
+    </div>
+  ` + el.innerHTML;
+}
+
+function showMealPlanError(msg) {
+  const el = document.getElementById('mp-results');
+  el.innerHTML = `
+    <div class="result-card error">
+      <h3>Error</h3>
+      <p>${escHtml(msg)}</p>
+    </div>
+  ` + el.innerHTML;
+}
+
+// ═══════════════════════════════════
+// ─── SHOPPING TAB ───
+// ═══════════════════════════════════
+
+async function loadLabels() {
+  const data = await api('/groups/labels');
+  allLabels = (data.items || data) ;
+  labelMap = {};
+  allLabels.forEach(l => { labelMap[l.id] = l; });
+}
+
+async function loadShoppingLists() {
+  const data = await api('/households/shopping/lists');
+  shoppingLists = data.items || data;
+  const sel = document.getElementById('list-selector');
+  sel.innerHTML = shoppingLists.map(l =>
+    `<option value="${l.id}" ${l.id === activeListId ? 'selected' : ''}>${escHtml(l.name)}</option>`
+  ).join('');
+  if (!activeListId && shoppingLists.length > 0) {
+    activeListId = shoppingLists[0].id;
+  }
+  if (activeListId) selectList(activeListId);
+}
+
+async function findPreviouslyBoughtList() {
+  const pb = shoppingLists.find(l => l.name.toLowerCase().includes('previously bought'));
+  if (pb) {
+    prevBoughtListId = pb.id;
+    await loadPrevBought();
+  }
+}
+
+async function loadPrevBought() {
+  if (!prevBoughtListId) return;
+  try {
+    const data = await api(`/households/shopping/lists/${prevBoughtListId}`);
+    const items = data.listItems || [];
+    prevBoughtItems = items.map(i => ({
+      note: (i.note || i.display || '').trim(),
+      labelId: i.label?.id || null,
+      labelName: i.label?.name || null,
+    })).filter(i => i.note);
+  } catch (e) {
+    console.error('Failed to load previously bought:', e);
+  }
+}
+
+function populateCategoryOverride() {
+  const sel = document.getElementById('category-override');
+  sel.innerHTML = '<option value="">Auto / None</option>' +
+    allLabels.sort((a,b) => a.name.localeCompare(b.name))
+      .map(l => `<option value="${l.id}">${escHtml(l.name)}</option>`)
+      .join('');
+}
+
+async function selectList(id) {
+  activeListId = id;
+  localStorage.setItem('mealie_active_list', id);
+  await refreshList();
+}
+
+async function refreshList() {
+  if (!activeListId) return;
+  const content = document.getElementById('shopping-content');
+  content.innerHTML = '<div class="loading-bar visible"><span class="spinner"></span> Loading...</div>';
+  try {
+    const data = await api(`/households/shopping/lists/${activeListId}`);
+    activeListItems = data.listItems || [];
+    renderShoppingList();
+  } catch (err) {
+    content.innerHTML = `<div class="empty-state">Error loading list</div>`;
+    toast('Failed to load list');
+  }
+}
+
+function renderShoppingList() {
+  const content = document.getElementById('shopping-content');
+  const unchecked = activeListItems.filter(i => !i.checked);
+  const checked = activeListItems.filter(i => i.checked);
+
+  if (unchecked.length === 0 && checked.length === 0) {
+    content.innerHTML = '<div class="empty-state">List is empty. Add items above!</div>';
+    return;
+  }
+
+  // Group unchecked by label
+  const groups = {};
+  unchecked.forEach(item => {
+    const labelName = item.label?.name || 'Other';
+    if (!groups[labelName]) groups[labelName] = [];
+    groups[labelName].push(item);
+  });
+
+  const sortedGroups = Object.keys(groups).sort((a, b) => {
+    if (a === 'Other') return 1;
+    if (b === 'Other') return -1;
+    return a.localeCompare(b);
+  });
+
+  let html = '';
+  sortedGroups.forEach(groupName => {
+    const items = groups[groupName];
+    html += `
+      <div class="category-group">
+        <div class="category-header" onclick="this.classList.toggle('collapsed')">
+          <span class="arrow">▼</span>
+          <span class="cat-name">${escHtml(groupName)}</span>
+          <span class="cat-count">${items.length}</span>
+        </div>
+        <div class="category-items">
+          ${items.map(i => renderItem(i, false)).join('')}
+        </div>
+      </div>
+    `;
+  });
+
+  if (checked.length > 0) {
+    html += `
+      <div class="checked-section">
+        <div class="checked-header">
+          <span>Checked (${checked.length})</span>
+          <button class="btn btn-outline btn-sm" onclick="clearCheckedItems()">Clear checked</button>
+        </div>
+        ${checked.map(i => renderItem(i, true)).join('')}
+      </div>
+    `;
+  }
+
+  content.innerHTML = html;
+}
+
+function renderItem(item, isChecked) {
+  const note = item.note || item.display || '(unnamed)';
+  const qty = item.quantity && item.quantity > 1 ? `×${item.quantity}` : '';
+  return `
+    <div class="shop-item ${isChecked ? 'checked' : ''}" onclick="toggleItem('${item.id}', ${!isChecked})">
+      <div class="check-circle"></div>
+      <span class="item-text">${escHtml(note)}</span>
+      ${qty ? `<span class="item-qty">${qty}</span>` : ''}
+    </div>
+  `;
+}
+
+async function toggleItem(itemId, checked) {
+  // Optimistic UI update
+  const item = activeListItems.find(i => i.id === itemId);
+  if (!item) return;
+  item.checked = checked;
+  renderShoppingList();
+
+  try {
+    await api(`/households/shopping/items/${itemId}`, {
+      method: 'PUT',
+      body: { ...item, checked },
+    });
+  } catch (err) {
+    // Revert on failure
+    item.checked = !checked;
+    renderShoppingList();
+    toast('Failed to update item');
+  }
+}
+
+async function clearCheckedItems() {
+  const checked = activeListItems.filter(i => i.checked);
+  if (checked.length === 0) return;
+
+  // Ensure checked items exist in Previously Bought list
+  if (prevBoughtListId) {
+    const prevNotes = new Set(prevBoughtItems.map(i => i.note.toLowerCase()));
+    const toAdd = checked.filter(i => {
+      const note = (i.note || '').trim().toLowerCase();
+      return note && !prevNotes.has(note);
+    });
+    // Add missing items to Previously Bought in background
+    for (const item of toAdd) {
+      try {
+        await api('/households/shopping/items', {
+          method: 'POST',
+          body: {
+            shoppingListId: prevBoughtListId,
+            note: item.note,
+            labelId: item.label?.id || null,
+            checked: false,
+          },
+        });
+        prevBoughtItems.push({
+          note: item.note,
+          labelId: item.label?.id || null,
+          labelName: item.label?.name || null,
+        });
+      } catch (e) {
+        console.error('Failed to add to previously bought:', e);
+      }
+    }
+  }
+
+  // Delete checked items
+  for (const item of checked) {
+    try {
+      await api(`/households/shopping/items/${item.id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error('Failed to delete item:', e);
+    }
+  }
+
+  activeListItems = activeListItems.filter(i => !i.checked);
+  renderShoppingList();
+  toast(`Cleared ${checked.length} items`);
+}
+
+// ─── Autocomplete ───
+function onAddItemInput() {
+  const val = document.getElementById('add-item-input').value.trim().toLowerCase();
+  const dropdown = document.getElementById('autocomplete-dropdown');
+  const catBar = document.getElementById('category-select-bar');
+  selectedAutocomplete = null;
+
+  if (val.length < 1) {
+    dropdown.classList.remove('visible');
+    catBar.classList.remove('visible');
+    return;
+  }
+
+  // Filter previously bought items
+  const matches = prevBoughtItems.filter(i =>
+    i.note.toLowerCase().includes(val)
+  ).sort((a, b) => {
+    // Prefer prefix matches
+    const aStart = a.note.toLowerCase().startsWith(val) ? 0 : 1;
+    const bStart = b.note.toLowerCase().startsWith(val) ? 0 : 1;
+    return aStart - bStart || a.note.localeCompare(b.note);
+  }).slice(0, 8);
+
+  let html = matches.map(m => `
+    <div class="ac-item" onclick="selectAutocomplete('${escHtml(m.note).replace(/'/g, "\\'")}', ${m.labelId ? `'${m.labelId}'` : 'null'})">
+      ${escHtml(m.note)}
+      ${m.labelName ? `<span class="ac-label">${escHtml(m.labelName)}</span>` : ''}
+    </div>
+  `).join('');
+
+  // Always show "Add new" option
+  const rawVal = document.getElementById('add-item-input').value.trim();
+  html += `<div class="ac-item ac-new" onclick="addItemDirect()">+ Add "${escHtml(rawVal)}"</div>`;
+
+  dropdown.innerHTML = html;
+  dropdown.classList.add('visible');
+  catBar.classList.add('visible');
+}
+
+function selectAutocomplete(note, labelId) {
+  document.getElementById('add-item-input').value = note;
+  document.getElementById('autocomplete-dropdown').classList.remove('visible');
+  selectedAutocomplete = { note, labelId };
+  if (labelId) {
+    document.getElementById('category-override').value = labelId;
+  }
+  addItemFromInput();
+}
+
+async function addItemFromInput() {
+  const input = document.getElementById('add-item-input');
+  const note = input.value.trim();
+  if (!note) return;
+
+  const overrideLabel = document.getElementById('category-override').value;
+  let labelId = overrideLabel || (selectedAutocomplete?.labelId) || null;
+
+  document.getElementById('autocomplete-dropdown').classList.remove('visible');
+  document.getElementById('category-select-bar').classList.remove('visible');
+
+  try {
+    const newItem = await api('/households/shopping/items', {
+      method: 'POST',
+      body: {
+        shoppingListId: activeListId,
+        note: note,
+        labelId: labelId || undefined,
+        checked: false,
+      },
+    });
+    activeListItems.push(newItem);
+    renderShoppingList();
+    input.value = '';
+    selectedAutocomplete = null;
+    document.getElementById('category-override').value = '';
+    toast(`Added "${note}"`);
+  } catch (err) {
+    toast('Failed to add item');
+  }
+}
+
+function addItemDirect() {
+  document.getElementById('autocomplete-dropdown').classList.remove('visible');
+  addItemFromInput();
+}
+
+// ─── Pull to refresh ───
+function setupPullToRefresh() {
+  const scroll = document.getElementById('shopping-scroll');
+  let startY = 0;
+  let pulling = false;
+
+  scroll.addEventListener('touchstart', (e) => {
+    if (scroll.scrollTop === 0) {
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }
+  }, { passive: true });
+
+  scroll.addEventListener('touchmove', (e) => {
+    if (!pulling) return;
+    const diff = e.touches[0].clientY - startY;
+    const indicator = document.getElementById('pull-indicator');
+    if (diff > 60) {
+      indicator.style.display = 'block';
+      indicator.textContent = '↓ Release to refresh';
+    } else if (diff > 0) {
+      indicator.style.display = 'block';
+      indicator.textContent = '↓ Pull to refresh';
+    }
+  }, { passive: true });
+
+  scroll.addEventListener('touchend', () => {
+    if (!pulling) return;
+    const indicator = document.getElementById('pull-indicator');
+    if (indicator.textContent.includes('Release')) {
+      indicator.textContent = 'Refreshing...';
+      refreshList().then(() => {
+        indicator.style.display = 'none';
+      });
+    } else {
+      indicator.style.display = 'none';
+    }
+    pulling = false;
+  });
+}
+
+// ─── Service Worker ───
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
