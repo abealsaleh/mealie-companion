@@ -105,7 +105,7 @@
       width: 100%;
     }
     #setup h2 { font-size: 22px; margin-bottom: 0; }
-    #setup input[type="email"], #setup input[type="password"] {
+    #setup input[type="text"], #setup input[type="password"] {
       width: 100%;
       max-width: 400px;
       padding: 14px 16px;
@@ -115,7 +115,7 @@
       color: var(--text);
       font-size: 16px;
     }
-    #setup input[type="email"]:focus, #setup input[type="password"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+    #setup input[type="text"]:focus, #setup input[type="password"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 
     /* --- Common form elements --- */
     .form-group { padding: 16px; }
@@ -649,7 +649,7 @@
     <div style="font-size:48px;margin-bottom:8px;text-align:center"><i data-lucide="chef-hat" style="width:48px;height:48px;color:var(--accent)"></i></div>
     <h2 style="text-align:center">Sign In</h2>
     <p style="color:var(--text-muted);text-align:center;font-size:14px;max-width:340px;margin:0 auto 16px">Log in with your Mealie account.</p>
-    <input type="email" id="login-email" name="email" placeholder="Email" autocomplete="username email">
+    <input type="text" id="login-email" name="username" placeholder="Email or username" autocomplete="username">
     <input type="password" id="login-password" name="password" placeholder="Password" autocomplete="current-password">
     <label style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:14px;width:100%;max-width:400px">
       <input type="checkbox" id="login-remember" name="remember" checked> Remember me
