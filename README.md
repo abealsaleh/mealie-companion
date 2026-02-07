@@ -83,7 +83,9 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Complete app (HTML + CSS + JS) |
+| `index.html` | App markup (HTML only) |
+| `style.css` | All styles |
+| `app.js` | All application logic |
 | `manifest.json` | PWA manifest for home screen install |
 | `sw.js` | Service worker for offline caching of static assets |
 | `nginx.conf` | Reverse proxy config (envsubst template) |

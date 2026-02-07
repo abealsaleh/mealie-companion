@@ -1,5 +1,5 @@
-const CACHE_NAME = 'mealie-companion-v1';
-const STATIC_ASSETS = ['/', '/index.html', '/manifest.json'];
+const CACHE_NAME = 'mealie-companion-v2';
+const STATIC_ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
