@@ -4,11 +4,11 @@
   "description": "Quick meal planning and shopping list for Mealie",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a1a2e",
-  "theme_color": "#e94560",
+  "background_color": "#fafafa",
+  "theme_color": "#ef6c00",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23e94560'/><text x='50' y='68' font-size='50' text-anchor='middle' fill='white'>🍽</text></svg>",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23ef6c00'/><text x='50' y='68' font-size='50' text-anchor='middle' fill='white'>🍽</text></svg>",
       "sizes": "any",
       "type": "image/svg+xml"
     }
