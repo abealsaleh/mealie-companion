@@ -609,13 +609,19 @@ function renderShoppingList() {
   });
 
   if (checked.length > 0) {
+    // Sort checked items by most recently updated first
+    const sortedChecked = [...checked].sort((a, b) => {
+      const aTime = a.updateAt || a.updatedAt || '';
+      const bTime = b.updateAt || b.updatedAt || '';
+      return bTime.localeCompare(aTime);
+    });
     html += `
       <div class="checked-section">
         <div class="checked-header">
           <span>Checked (${checked.length})</span>
           <button class="btn btn-outline btn-sm" onclick="clearCheckedItems()">Clear checked</button>
         </div>
-        ${checked.map(i => renderItem(i, true)).join('')}
+        ${sortedChecked.map(i => renderItem(i, true)).join('')}
       </div>
     `;
   }
@@ -628,10 +634,11 @@ function renderItem(item, isChecked) {
   const name = getItemDisplayName(item);
   const qty = item.quantity || 1;
   const itemNote = item.note || '';
+  const isFoodLinked = !!item.food?.name;
   // Show note inline only if item is food-linked and has a separate note
-  const inlineNote = item.food?.name && itemNote ? itemNote : '';
+  const inlineNote = isFoodLinked && itemNote ? itemNote : '';
   const labelName = item.label?.name || item.food?.label?.name || '';
-  const hasNote = !!itemNote;
+  const hasNote = isFoodLinked && !!itemNote;
   return `
     <div class="shop-item ${isChecked ? 'checked' : ''}">
       <div class="check-circle" onclick="toggleItem('${item.id}', ${!isChecked})"></div>
@@ -642,9 +649,9 @@ function renderItem(item, isChecked) {
           <span class="qty-val">${qty}</span>
           <button onclick="event.stopPropagation();adjustQty('${item.id}',1)" title="Increase">+</button>
         </div>
-        <button class="item-note-btn ${hasNote ? 'has-note' : ''}" onclick="event.stopPropagation();openNoteModal('${item.id}')" title="${hasNote ? 'Edit note' : 'Add note'}">
+        ${isFoodLinked ? `<button class="item-note-btn ${hasNote ? 'has-note' : ''}" onclick="event.stopPropagation();openNoteModal('${item.id}')" title="${hasNote ? 'Edit note' : 'Add note'}">
           <i data-lucide="message-square" style="width:14px;height:14px"></i>
-        </button>
+        </button>` : ''}
         <button class="item-label-btn" onclick="event.stopPropagation();openLabelModal('${item.id}')">${labelName ? escHtml(labelName) : 'No label'}</button>
       </div>
     </div>
@@ -839,9 +846,23 @@ async function addItemFromInput() {
         body.labelId = overrideLabel;
       }
     } else {
-      body.note = text;
-      if (overrideLabel) {
-        body.labelId = overrideLabel;
+      // Create a food entry so the name is stored in food.name
+      // and the note field stays available for actual notes
+      try {
+        const newFood = await api('/foods', {
+          method: 'POST',
+          body: { name: text, labelId: overrideLabel || undefined },
+        });
+        body.foodId = newFood.id;
+        if (overrideLabel) {
+          body.labelId = overrideLabel;
+        }
+      } catch (e) {
+        // Fall back to note-only if food creation fails
+        body.note = text;
+        if (overrideLabel) {
+          body.labelId = overrideLabel;
+        }
       }
     }
 
