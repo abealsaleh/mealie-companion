@@ -44,7 +44,7 @@ Single-page app (HTML/CSS/JS, no build step) served by nginx:alpine. nginx proxi
 
 5. Open `http://<your-host>:9944` in a browser.
 
-6. Sign in with your Mealie email and password on first use.
+6. Sign in with your Mealie username or email on first use.
 
 ### Synology NAS
 
@@ -56,19 +56,23 @@ Deploy to `/volume1/docker/support/mealie-companion/`. Access via port 9944, or 
 
 Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Session tokens are stored in `sessionStorage` and auto-refresh every 20 minutes. No API keys to manage.
 
-### Meal Plan Quick Add
+### Meal Plan
 
-- Auto-detects URLs vs recipe names
-- Searches existing recipes to avoid duplicates
-- Imports recipes from URLs via Mealie's scraper
-- Date picker (defaults to today) and meal type selector (defaults to dinner)
+- **8-day rolling view**: shows today through 7 days ahead in the left column
+- **Quick add** (right column): auto-detects URLs vs recipe names
+- **Recipe search**: searches existing recipes with keyboard navigation (arrow keys + Enter)
+- **URL import**: imports recipes from URLs via Mealie's scraper
+- **Date picker** (defaults to today) and **meal type selector** (defaults to dinner)
+- **Delete entries**: remove meals directly from the plan view
+- Two-column layout on desktop, stacked on mobile
 
 ### Shopping List
 
 - **List selector**: switch between your Mealie shopping lists
-- **Category grouping**: items grouped by label with collapsible sections
-- **Autocomplete**: searches Mealie's food database (`/api/foods`) as you type; selecting a food links it via `foodId` so the food's label is auto-assigned for category grouping
+- **Category grouping**: items grouped by label with collapsible sections and orange headers
+- **Autocomplete**: searches Mealie's food database (`/api/foods`) as you type with keyboard navigation (arrow keys + Enter); selecting a food links it via `foodId` so the food's label is auto-assigned for category grouping
 - **New items**: items not in the food database are added as note-based items with optional manual category selection
+- **Searchable label picker**: tap a label badge to reassign categories; search/filter labels by name. Changes propagate back to Mealie's food database
 - **Tap to check/uncheck**: items move between active and checked sections
 - **Clear checked**: deletes all checked items from the list
 - **Pull to refresh**: on mobile, pull down to re-fetch
@@ -89,11 +93,14 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Session tok
 - `GET /api/auth/refresh` - refresh session token
 - `GET/POST /api/recipes` - search and create recipes
 - `POST /api/recipes/create/url` - import from URL
+- `GET /api/households/mealplans` - fetch meal plan entries by date range
 - `POST /api/households/mealplans` - add to meal plan
+- `DELETE /api/households/mealplans/{id}` - remove meal plan entry
 - `GET /api/households/shopping/lists` - list shopping lists
 - `GET /api/households/shopping/lists/{id}` - get list items
 - `POST /api/households/shopping/items` - add item (with `foodId` or `note`)
 - `PUT /api/households/shopping/items/{id}` - check/uncheck
 - `DELETE /api/households/shopping/items/{id}` - remove item
 - `GET /api/foods?search=` - autocomplete food search
+- `GET/PUT /api/foods/{id}` - read/update food (for label propagation)
 - `GET /api/groups/labels` - category labels
