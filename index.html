@@ -475,6 +475,63 @@
       text-decoration: line-through;
       color: var(--text-dim);
     }
+    .shop-item .item-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    .shop-item.checked .item-actions { display: none; }
+
+    .qty-stepper {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--surface2);
+    }
+    .qty-stepper button {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 16px;
+      font-weight: 700;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .qty-stepper button:active { background: var(--accent-light); }
+    .qty-stepper .qty-val {
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 22px;
+      text-align: center;
+      color: var(--text);
+    }
+
+    .item-note-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+    }
+    .item-note-btn:active { background: var(--accent-light); color: var(--accent); }
+    .item-note-btn.has-note { color: var(--accent); border-color: var(--accent); }
+
     .shop-item .item-label-btn {
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -483,12 +540,61 @@
       font-size: 11px;
       padding: 3px 8px;
       cursor: pointer;
-      margin-left: 8px;
       flex-shrink: 0;
       white-space: nowrap;
     }
     .shop-item .item-label-btn:active { background: var(--accent-light); color: var(--accent); }
-    .shop-item.checked .item-label-btn { display: none; }
+
+    /* --- Note editor modal --- */
+    .note-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 300;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .note-modal-overlay.visible { display: flex; }
+    .note-modal {
+      background: var(--surface);
+      border-radius: var(--radius) var(--radius) 0 0;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+      padding: 16px;
+      gap: 12px;
+    }
+    .note-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .note-modal-header button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+    }
+    .note-modal textarea {
+      width: 100%;
+      padding: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 80px;
+    }
+    .note-modal textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 
     /* --- Label picker modal --- */
     .label-modal-overlay {
@@ -755,6 +861,19 @@
       <input type="text" id="label-search-input" placeholder="Search categories..." oninput="filterLabelModal()" autocomplete="off">
     </div>
     <div class="label-modal-list" id="label-modal-list"></div>
+  </div>
+</div>
+
+<div class="note-modal-overlay" id="note-modal" onclick="if(event.target===this)closeNoteModal()">
+  <div class="note-modal">
+    <div class="note-modal-header">
+      <span id="note-modal-title">Edit Note</span>
+      <button onclick="closeNoteModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    </div>
+    <textarea id="note-modal-input" placeholder="Add a note..."></textarea>
+    <button class="btn btn-primary" onclick="saveNote()" style="display:flex;align-items:center;justify-content:center;gap:8px">
+      <i data-lucide="check" class="icon"></i> Save
+    </button>
   </div>
 </div>
 
@@ -1364,15 +1483,27 @@ function renderShoppingList() {
 
 function renderItem(item, isChecked) {
   const name = getItemDisplayName(item);
-  const qty = item.quantity && item.quantity > 1 ? `×${item.quantity}` : '';
-  const note = item.food?.name && item.note ? item.note : '';
+  const qty = item.quantity || 1;
+  const itemNote = item.note || '';
+  // Show note inline only if item is food-linked and has a separate note
+  const inlineNote = item.food?.name && itemNote ? itemNote : '';
   const labelName = item.label?.name || item.food?.label?.name || '';
+  const hasNote = !!itemNote;
   return `
     <div class="shop-item ${isChecked ? 'checked' : ''}">
       <div class="check-circle" onclick="toggleItem('${item.id}', ${!isChecked})"></div>
-      <span class="item-text" onclick="toggleItem('${item.id}', ${!isChecked})">${escHtml(name)}${note ? ` <span style="color:var(--text-dim);font-size:13px">(${escHtml(note)})</span>` : ''}</span>
-      ${qty ? `<span class="item-qty">${qty}</span>` : ''}
-      <button class="item-label-btn" onclick="event.stopPropagation();openLabelModal('${item.id}')">${labelName ? escHtml(labelName) : 'No label'}</button>
+      <span class="item-text" onclick="toggleItem('${item.id}', ${!isChecked})">${escHtml(name)}${inlineNote ? ` <span style="color:var(--text-dim);font-size:13px">(${escHtml(inlineNote)})</span>` : ''}</span>
+      <div class="item-actions">
+        <div class="qty-stepper">
+          <button onclick="event.stopPropagation();adjustQty('${item.id}',-1)" title="Decrease">−</button>
+          <span class="qty-val">${qty}</span>
+          <button onclick="event.stopPropagation();adjustQty('${item.id}',1)" title="Increase">+</button>
+        </div>
+        <button class="item-note-btn ${hasNote ? 'has-note' : ''}" onclick="event.stopPropagation();openNoteModal('${item.id}')" title="${hasNote ? 'Edit note' : 'Add note'}">
+          <i data-lucide="message-square" style="width:14px;height:14px"></i>
+        </button>
+        <button class="item-label-btn" onclick="event.stopPropagation();openLabelModal('${item.id}')">${labelName ? escHtml(labelName) : 'No label'}</button>
+      </div>
     </div>
   `;
 }
@@ -1392,6 +1523,64 @@ async function toggleItem(itemId, checked) {
     item.checked = !checked;
     renderShoppingList();
     toast('Failed to update item');
+  }
+}
+
+async function adjustQty(itemId, delta) {
+  const item = activeListItems.find(i => i.id === itemId);
+  if (!item) return;
+  const oldQty = item.quantity || 1;
+  const newQty = Math.max(1, oldQty + delta);
+  if (newQty === oldQty) return;
+  item.quantity = newQty;
+  renderShoppingList();
+  try {
+    await api(`/households/shopping/items/${itemId}`, {
+      method: 'PUT',
+      body: { ...item, quantity: newQty },
+    });
+  } catch (err) {
+    item.quantity = oldQty;
+    renderShoppingList();
+    toast('Failed to update quantity');
+  }
+}
+
+let noteEditItemId = null;
+
+function openNoteModal(itemId) {
+  noteEditItemId = itemId;
+  const item = activeListItems.find(i => i.id === itemId);
+  if (!item) return;
+  const name = getItemDisplayName(item);
+  document.getElementById('note-modal-title').textContent = name;
+  document.getElementById('note-modal-input').value = item.note || '';
+  document.getElementById('note-modal').classList.add('visible');
+  setTimeout(() => document.getElementById('note-modal-input').focus(), 100);
+}
+
+function closeNoteModal() {
+  document.getElementById('note-modal').classList.remove('visible');
+  noteEditItemId = null;
+}
+
+async function saveNote() {
+  const item = activeListItems.find(i => i.id === noteEditItemId);
+  if (!item) return;
+  const newNote = document.getElementById('note-modal-input').value.trim();
+  const oldNote = item.note;
+  item.note = newNote;
+  closeNoteModal();
+  renderShoppingList();
+  try {
+    await api(`/households/shopping/items/${item.id}`, {
+      method: 'PUT',
+      body: { ...item, note: newNote },
+    });
+  } catch (err) {
+    item.note = oldNote;
+    renderShoppingList();
+    toast('Failed to update note');
   }
 }
 
