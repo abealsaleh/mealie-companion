@@ -774,23 +774,126 @@ header { flex-shrink: 0; }
   -webkit-overflow-scrolling: touch;
 }
 .ingredient-item {
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   font-size: 15px;
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
 }
 .ingredient-item:last-child { border-bottom: none; }
-.ingredient-qty {
-  color: var(--accent);
+.ingredient-section-header {
   font-weight: 600;
-  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 16px 4px;
+  cursor: default;
+}
+.ingredient-section-header:active { background: none; }
+.ingredient-cb {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
   flex-shrink: 0;
 }
-.ingredient-name {
+.ingredient-display {
   flex: 1;
+  font-size: 15px;
 }
+.ingredient-edit-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.ingredient-edit-btn:active { background: var(--surface2); color: var(--accent); }
+
+/* Edit mode */
+.ingredient-editing {
+  align-items: flex-start;
+  background: var(--surface2);
+}
+.ingredient-editing .ingredient-cb { margin-top: 8px; }
+.ingredient-edit-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ingredient-edit-row {
+  display: flex;
+  gap: 8px;
+}
+.ing-edit-qty {
+  width: 64px;
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 8px;
+  text-align: center;
+  outline: none;
+  color: inherit;
+}
+.ing-edit-unit {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 8px;
+  outline: none;
+  color: inherit;
+  appearance: auto;
+}
+.ing-edit-name {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 8px;
+  outline: none;
+  color: inherit;
+}
+.ing-edit-qty:focus, .ing-edit-unit:focus, .ing-edit-name:focus {
+  border-color: var(--accent);
+}
+.ingredient-edit-actions {
+  display: flex;
+  justify-content: space-between;
+}
+.ing-edit-delete {
+  color: #d32f2f;
+  border-color: #d32f2f;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ing-edit-delete:active { background: #d32f2f; color: #fff; }
+.ingredient-add-row {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ingredient-add-row:active { background: var(--surface2); }
 .ingredient-empty {
   padding: 24px 16px;
   text-align: center;

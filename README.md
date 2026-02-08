@@ -1,9 +1,11 @@
 # Mealie Companion
 
-A lightweight companion web app for [Mealie](https://mealie.io/) that provides two features the default UI lacks:
+Mealie Companion is a meal planning and shopping list focused UI to enhance [Mealie](https://mealie.io/). It's meant to allow you to quickly plan your weeks meals and create coherent shopping lists, while being able to leverage Mealie's advanced features.
 
-1. **Quick Add to Meal Plan** - paste a URL or type a recipe name to instantly add it to your meal plan
-2. **Shopping List** - OurGroceries-style shopping list with category grouping, autocomplete from Mealie's food database, and tap-to-check
+**Key capabilities:**
+
+1. **Meal Plan** - 8-day rolling view with quick add (paste a URL or search recipes), ingredient viewer, and one-tap add to shopping list
+2. **Shopping List** - OurGroceries-style list with category grouping, autocomplete from Mealie's food database, and tap-to-check
 
 ## Architecture
 
@@ -59,8 +61,8 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 - **Recipe search**: searches existing recipes with keyboard navigation (arrow keys + Enter)
 - **URL import**: imports recipes from URLs via Mealie's scraper
 - **Day-of-week date picker** (defaults to today, shows "Today", "Tomorrow", day names with dates) and **meal type selector** (defaults to dinner)
-- **Ingredient viewer**: tap a recipe name to see its ingredients in a modal
-- **Add to shopping list**: tap the cart icon on any recipe to add its ingredients to a shopping list
+- **Ingredient viewer**: tap a recipe name to see its ingredients with checkboxes for selective adding; tap the pencil icon to edit quantity, unit (from server), and item name before adding
+- **Add to shopping list**: tap the cart icon on any recipe to bulk-add all ingredients, or use the ingredient viewer to select/edit individual items first
 - **Delete entries**: remove meals directly from the plan view
 
 ### Shopping List
@@ -106,5 +108,6 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 - `GET /api/foods?search=` - autocomplete food search
 - `GET /api/recipes/{slug}` - get recipe details (ingredients)
 - `POST /api/households/shopping/lists/{id}/recipe/{recipeId}` - add recipe ingredients to list
+- `GET /api/units` - list available units (for ingredient editing)
 - `GET/PUT /api/foods/{id}` - read/update food (for label propagation)
 - `GET/POST /api/groups/labels` - list and create category labels

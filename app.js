@@ -592,11 +592,30 @@ function showMealPlanError(msg) {
 }
 
 // ─── Ingredient viewer modal ───
+let loadedIngredients = [];
+let ingredientChecked = [];
+let ingredientEditing = -1; // index of row in edit mode, -1 = none
+let ingredientSlug = ''; // recipe slug for saving back
+let allUnits = []; // cached from server
+
+async function loadUnits() {
+  if (allUnits.length) return;
+  try {
+    const data = await api('/units');
+    allUnits = (data.items || data).sort((a, b) => a.name.localeCompare(b.name));
+  } catch (e) { /* non-critical */ }
+}
+
 async function openIngredientModal(slug, name, recipeId) {
   const modal = document.getElementById('ingredient-modal');
   const title = document.getElementById('ingredient-modal-title');
   const list = document.getElementById('ingredient-list');
   const footer = document.getElementById('ingredient-modal-footer');
+
+  loadedIngredients = [];
+  ingredientChecked = [];
+  ingredientEditing = -1;
+  ingredientSlug = slug;
 
   title.textContent = name;
   list.innerHTML = '<div class="ingredient-loading"><span class="spinner"></span> Loading ingredients...</div>';
@@ -604,56 +623,265 @@ async function openIngredientModal(slug, name, recipeId) {
   modal.classList.add('visible');
   initIcons();
 
-  if (recipeId) {
-    const btn = document.getElementById('ingredient-add-btn');
-    btn.onclick = () => {
-      closeIngredientModal();
-      addRecipeToShoppingList(recipeId, name);
-    };
-  }
+  // Load units in parallel with recipe
+  const [recipe] = await Promise.all([
+    api(`/recipes/${slug}`).catch(() => null),
+    loadUnits(),
+  ]);
 
-  try {
-    const recipe = await api(`/recipes/${slug}`);
-    const ingredients = recipe.recipeIngredient || [];
-
-    if (ingredients.length === 0) {
-      list.innerHTML = '<div class="ingredient-empty">No ingredients listed</div>';
-      return;
-    }
-
-    list.innerHTML = ingredients.map(ing => {
-      if (ing.title) {
-        return `<div class="ingredient-item" style="font-weight:600;color:var(--text-muted);font-size:13px;text-transform:uppercase;letter-spacing:0.5px;padding:10px 16px 4px">${escHtml(ing.title)}</div>`;
-      }
-      const display = formatIngredient(ing);
-      return `<div class="ingredient-item">${display}</div>`;
-    }).join('');
-  } catch (err) {
+  if (!recipe) {
     list.innerHTML = '<div class="ingredient-empty">Failed to load ingredients</div>';
+    return;
   }
+
+  const ingredients = recipe.recipeIngredient || [];
+  if (ingredients.length === 0) {
+    list.innerHTML = '<div class="ingredient-empty">No ingredients listed</div>';
+    return;
+  }
+
+  // Normalize each ingredient into editable fields
+  loadedIngredients = ingredients.map(ing => ({
+    _orig: ing,
+    isTitle: !!ing.title,
+    title: ing.title || '',
+    qty: (ing.quantity && ing.quantity > 0) ? ing.quantity : null,
+    unitId: ing.unit?.id || '',
+    unitName: ing.unit?.name || '',
+    foodId: ing.food?.id || '',
+    name: ing.food?.name || ing.note || ing.display || '',
+  }));
+  ingredientChecked = loadedIngredients.map(ing => !ing.isTitle);
+  renderIngredientList();
+  updateIngredientAddBtn();
 }
 
-function formatIngredient(ing) {
-  // Use the display field if available (pre-formatted by Mealie)
-  if (ing.display) return escHtml(ing.display);
-
-  // Fallback: build from structured fields
+function ingredientDisplayText(ing) {
   let parts = [];
-  if (ing.quantity && ing.quantity > 0) {
-    let qty = ing.quantity % 1 === 0 ? String(ing.quantity) : String(ing.quantity);
-    if (ing.unit?.name) qty += ' ' + ing.unit.name;
-    parts.push(`<span class="ingredient-qty">${escHtml(qty)}</span>`);
+  if (ing.qty != null) {
+    let q = ing.qty % 1 === 0 ? String(Math.round(ing.qty)) : String(ing.qty);
+    if (ing.unitName) q += ' ' + ing.unitName;
+    parts.push(q);
   }
-  if (ing.food?.name) {
-    parts.push(`<span class="ingredient-name">${escHtml(ing.food.name)}</span>`);
-  } else if (ing.note) {
-    parts.push(`<span class="ingredient-name">${escHtml(ing.note)}</span>`);
+  if (ing.name) parts.push(ing.name);
+  return parts.join(' ') || '(unnamed)';
+}
+
+function renderIngredientList() {
+  const list = document.getElementById('ingredient-list');
+  list.innerHTML = loadedIngredients.map((ing, i) => {
+    if (ing.isTitle) {
+      return `<div class="ingredient-item ingredient-section-header">${escHtml(ing.title)}</div>`;
+    }
+    const checked = ingredientChecked[i] ? 'checked' : '';
+
+    if (ingredientEditing === i) {
+      // Edit mode
+      const qtyVal = ing.qty != null ? ing.qty : '';
+      const unitOptions = allUnits.map(u =>
+        `<option value="${u.id}" ${u.id === ing.unitId ? 'selected' : ''}>${escHtml(u.name)}</option>`
+      ).join('');
+      return `<div class="ingredient-item ingredient-editing">
+        <input type="checkbox" class="ingredient-cb" ${checked} onchange="toggleIngredient(${i})">
+        <div class="ingredient-edit-fields">
+          <div class="ingredient-edit-row">
+            <input type="number" class="ing-edit-qty" value="${escAttr(String(qtyVal))}" placeholder="Qty" step="any"
+                   onchange="loadedIngredients[${i}].qty=this.value?parseFloat(this.value):null">
+            <select class="ing-edit-unit" onchange="setIngredientUnit(${i},this.value)">
+              <option value="">no unit</option>
+              ${unitOptions}
+            </select>
+          </div>
+          <input type="text" class="ing-edit-name" value="${escAttr(ing.name)}" placeholder="Item name"
+                 onchange="loadedIngredients[${i}].name=this.value.trim()">
+          <div class="ingredient-edit-actions">
+            <button class="btn btn-outline btn-sm ing-edit-delete" onclick="removeIngredient(${i})"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Remove</button>
+            <button class="btn btn-outline btn-sm ing-edit-done" onclick="ingredientEditing=-1;renderIngredientList()">Done</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // Display mode
+    const display = ingredientDisplayText(ing);
+    return `<div class="ingredient-item">
+      <input type="checkbox" class="ingredient-cb" ${checked} onchange="toggleIngredient(${i})">
+      <span class="ingredient-display">${escHtml(display)}</span>
+      <button class="ingredient-edit-btn" onclick="openIngredientEdit(${i})" title="Edit"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+    </div>`;
+  }).join('');
+
+  // Add item row at the bottom
+  list.innerHTML += `<div class="ingredient-add-row" onclick="addIngredientRow()">
+    <i data-lucide="plus" style="width:16px;height:16px"></i> Add item
+  </div>`;
+  initIcons();
+}
+
+function addIngredientRow() {
+  const newIng = { isTitle: false, title: '', qty: null, unitId: '', unitName: '', foodId: '', name: '' };
+  loadedIngredients.push(newIng);
+  ingredientChecked.push(true);
+  ingredientEditing = loadedIngredients.length - 1;
+  renderIngredientList();
+  updateIngredientAddBtn();
+  setTimeout(() => {
+    const el = document.querySelector('.ing-edit-name');
+    if (el) el.focus();
+  }, 50);
+}
+
+function removeIngredient(idx) {
+  loadedIngredients.splice(idx, 1);
+  ingredientChecked.splice(idx, 1);
+  if (ingredientEditing === idx) ingredientEditing = -1;
+  else if (ingredientEditing > idx) ingredientEditing--;
+  renderIngredientList();
+  updateIngredientAddBtn();
+}
+
+function openIngredientEdit(idx) {
+  ingredientEditing = idx;
+  renderIngredientList();
+  // Focus the name field
+  setTimeout(() => {
+    const el = document.querySelector('.ing-edit-name');
+    if (el) el.focus();
+  }, 50);
+}
+
+function setIngredientUnit(idx, unitId) {
+  loadedIngredients[idx].unitId = unitId;
+  const u = allUnits.find(u => u.id === unitId);
+  loadedIngredients[idx].unitName = u ? u.name : '';
+}
+
+function toggleIngredient(idx) {
+  ingredientChecked[idx] = !ingredientChecked[idx];
+  updateIngredientAddBtn();
+}
+
+function escAttr(s) {
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateIngredientAddBtn() {
+  const btn = document.getElementById('ingredient-add-btn');
+  const count = ingredientChecked.filter(Boolean).length;
+  btn.innerHTML = `<i data-lucide="shopping-cart" class="icon"></i> Add ${count} item${count !== 1 ? 's' : ''} to Shopping List`;
+  btn.disabled = count === 0;
+  btn.onclick = () => addCheckedIngredientsToList();
+  initIcons();
+}
+
+async function addCheckedIngredientsToList() {
+  if (shoppingLists.length === 0) {
+    toast('No shopping lists found');
+    return;
   }
-  return parts.join(' ') || escHtml(ing.note || '(unnamed)');
+  // Close ingredient modal first so list picker isn't hidden behind it
+  document.getElementById('ingredient-modal').classList.remove('visible');
+  saveIngredientsToRecipe();
+
+  if (shoppingLists.length === 1) {
+    doAddCheckedIngredients(shoppingLists[0].id, shoppingLists[0].name);
+    return;
+  }
+  const listEl = document.getElementById('list-picker-options');
+  listEl.innerHTML = shoppingLists.map(l => `
+    <div class="label-modal-item" onclick="doAddCheckedIngredients('${l.id}','${escHtml(l.name)}');closeListPicker()">
+      <span class="lm-check">${l.id === activeListId ? '✓' : ''}</span> ${escHtml(l.name)}
+    </div>
+  `).join('');
+  document.getElementById('list-picker-modal').classList.add('visible');
+}
+
+async function doAddCheckedIngredients(listId, listName) {
+  const items = loadedIngredients
+    .filter((ing, i) => ingredientChecked[i] && !ing.isTitle);
+  if (items.length === 0) return;
+
+  toast(`Adding ${items.length} ingredient${items.length !== 1 ? 's' : ''}...`);
+
+  // Units that make sense as shopping quantities (countable/purchasable)
+  const SHOPPING_UNITS = new Set(['can', 'jar', 'bunch', 'head', 'pack', 'clove', 'sprig', 'bag']);
+
+  let added = 0;
+  for (const ing of items) {
+    try {
+      const body = { shoppingListId: listId, checked: false };
+      if (!ing.name) continue;
+
+      if (ing.foodId) {
+        body.foodId = ing.foodId;
+      } else {
+        body.note = ing.name;
+      }
+
+      // Only carry quantity/unit for shopping-friendly units (can, jar, bunch, etc.)
+      // Unitless counts (e.g. "3 eggs") and cooking measurements (g, cups, tbsp)
+      // don't map to shopping quantities, so just add the food name.
+      if (ing.qty != null && ing.qty > 0 && ing.unitId) {
+        const unitName = (ing.unitName || '').toLowerCase();
+        if (SHOPPING_UNITS.has(unitName)) {
+          body.quantity = ing.qty;
+          body.unitId = ing.unitId;
+        }
+      }
+
+      await api('/households/shopping/items', { method: 'POST', body });
+      added++;
+    } catch (e) { /* skip failed items */ }
+  }
+
+  toast(`Added ${added} ingredient${added !== 1 ? 's' : ''} to ${listName}`);
+  if (listId === activeListId) refreshList();
 }
 
 function closeIngredientModal() {
   document.getElementById('ingredient-modal').classList.remove('visible');
+  saveIngredientsToRecipe();
+}
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+async function saveIngredientsToRecipe() {
+  if (!ingredientSlug || loadedIngredients.length === 0) return;
+
+  const recipeIngredient = loadedIngredients.map(ing => {
+    if (ing.isTitle) {
+      return {
+        quantity: 0,
+        unit: null,
+        food: null,
+        note: '',
+        title: ing.title,
+        referenceId: ing._orig?.referenceId || generateUUID(),
+      };
+    }
+    return {
+      quantity: ing.qty || 0,
+      unit: ing.unitId ? { id: ing.unitId, name: ing.unitName } : null,
+      food: ing.foodId ? { id: ing.foodId, name: ing.name } : null,
+      note: ing.foodId ? '' : ing.name,
+      title: null,
+      referenceId: ing._orig?.referenceId || generateUUID(),
+    };
+  });
+
+  try {
+    await api(`/recipes/${ingredientSlug}`, {
+      method: 'PATCH',
+      body: { recipeIngredient },
+    });
+  } catch (e) {
+    // Silent fail — don't block the UI
+  }
 }
 
 // ═══════════════════════════════════
