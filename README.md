@@ -59,6 +59,8 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 - **Recipe search**: searches existing recipes with keyboard navigation (arrow keys + Enter)
 - **URL import**: imports recipes from URLs via Mealie's scraper
 - **Day-of-week date picker** (defaults to today, shows "Today", "Tomorrow", day names with dates) and **meal type selector** (defaults to dinner)
+- **Ingredient viewer**: tap a recipe name to see its ingredients in a modal
+- **Add to shopping list**: tap the cart icon on any recipe to add its ingredients to a shopping list
 - **Delete entries**: remove meals directly from the plan view
 
 ### Shopping List
@@ -72,7 +74,7 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 - **Notes**: tap the note icon to add or edit a note on any item; icon highlights when a note exists
 - **Searchable label picker**: tap a label badge to reassign categories; search/filter labels by name; create new categories inline. Changes propagate back to Mealie's food database
 - **Tap to check/uncheck**: items move between active and checked sections
-- **Clear checked**: deletes all checked items from the list
+- **Clear checked**: deletes all checked items with optimistic UI feedback
 - **Pull to refresh**: on mobile, pull down to re-fetch
 
 ## Files
@@ -102,5 +104,7 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 - `PUT /api/households/shopping/items/{id}` - check/uncheck
 - `DELETE /api/households/shopping/items/{id}` - remove item
 - `GET /api/foods?search=` - autocomplete food search
+- `GET /api/recipes/{slug}` - get recipe details (ingredients)
+- `POST /api/households/shopping/lists/{id}/recipe/{recipeId}` - add recipe ingredients to list
 - `GET/PUT /api/foods/{id}` - read/update food (for label propagation)
 - `GET/POST /api/groups/labels` - list and create category labels

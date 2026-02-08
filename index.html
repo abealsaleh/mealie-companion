@@ -164,6 +164,31 @@
   </div>
 </div>
 
+<div class="label-modal-overlay" id="list-picker-modal" onclick="if(event.target===this)closeListPicker()">
+  <div class="label-modal">
+    <div class="label-modal-header">
+      <span>Add ingredients to...</span>
+      <button onclick="closeListPicker()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    </div>
+    <div class="label-modal-list" id="list-picker-options"></div>
+  </div>
+</div>
+
+<div class="label-modal-overlay" id="ingredient-modal" onclick="if(event.target===this)closeIngredientModal()">
+  <div class="label-modal ingredient-modal">
+    <div class="label-modal-header">
+      <span id="ingredient-modal-title">Ingredients</span>
+      <button onclick="closeIngredientModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    </div>
+    <div class="ingredient-list" id="ingredient-list"></div>
+    <div class="ingredient-modal-footer" id="ingredient-modal-footer">
+      <button class="btn btn-primary" id="ingredient-add-btn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px">
+        <i data-lucide="shopping-cart" class="icon"></i> Add to Shopping List
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="/app.js"></script>

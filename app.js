@@ -393,11 +393,16 @@ function renderMealPlan(rangeStart, entries) {
         byMeal[mealType].forEach(entry => {
           const name = entry.recipe?.name || entry.title || '(untitled)';
           const icon = MEAL_ICONS[mealType] || 'utensils';
+          const recipeId = entry.recipe?.id || entry.recipeId || '';
+          const recipeSlug = entry.recipe?.slug || '';
           html += `
             <div class="mp-entry">
               <span class="mp-entry-icon"><i data-lucide="${icon}" style="width:16px;height:16px"></i></span>
-              <span class="mp-entry-name">${escHtml(name)}</span>
-              <button class="mp-entry-delete" onclick="event.stopPropagation();deleteMealEntry(${entry.id})" title="Remove">
+              <span class="mp-entry-name ${recipeSlug ? 'clickable' : ''}" ${recipeSlug ? `onclick="openIngredientModal('${escHtml(recipeSlug)}','${escHtml(name)}','${recipeId}')"` : ''}>${escHtml(name)}</span>
+              ${recipeId ? `<button class="mp-entry-action" onclick="event.stopPropagation();addRecipeToShoppingList('${recipeId}','${escHtml(name)}')" title="Add to shopping list">
+                <i data-lucide="shopping-cart" style="width:14px;height:14px"></i>
+              </button>` : ''}
+              <button class="mp-entry-action mp-entry-delete" onclick="event.stopPropagation();deleteMealEntry(${entry.id})" title="Remove">
                 <i data-lucide="x" style="width:14px;height:14px"></i>
               </button>
             </div>
@@ -420,6 +425,60 @@ async function deleteMealEntry(entryId) {
     loadMealPlan();
   } catch (err) {
     toast('Failed to remove entry');
+  }
+}
+
+// ─── Add recipe ingredients to shopping list ───
+let pendingRecipeId = null;
+let pendingRecipeName = null;
+
+function addRecipeToShoppingList(recipeId, recipeName) {
+  pendingRecipeId = recipeId;
+  pendingRecipeName = recipeName;
+  if (shoppingLists.length === 0) {
+    toast('No shopping lists found');
+    return;
+  }
+  if (shoppingLists.length === 1) {
+    doAddRecipeToList(shoppingLists[0].id, shoppingLists[0].name);
+    return;
+  }
+  // Show list picker
+  const list = document.getElementById('list-picker-options');
+  list.innerHTML = shoppingLists.map(l => `
+    <div class="label-modal-item" onclick="pickListForRecipe('${l.id}','${escHtml(l.name)}')">
+      <span class="lm-check">${l.id === activeListId ? '✓' : ''}</span> ${escHtml(l.name)}
+    </div>
+  `).join('');
+  document.getElementById('list-picker-modal').classList.add('visible');
+}
+
+function pickListForRecipe(listId, listName) {
+  document.getElementById('list-picker-modal').classList.remove('visible');
+  doAddRecipeToList(listId, listName);
+}
+
+function closeListPicker() {
+  document.getElementById('list-picker-modal').classList.remove('visible');
+  pendingRecipeId = null;
+  pendingRecipeName = null;
+}
+
+async function doAddRecipeToList(listId, listName) {
+  const recipeId = pendingRecipeId;
+  const recipeName = pendingRecipeName;
+  pendingRecipeId = null;
+  pendingRecipeName = null;
+  if (!recipeId) return;
+
+  toast('Adding ingredients...');
+  try {
+    await api(`/households/shopping/lists/${listId}/recipe/${recipeId}`, { method: 'POST' });
+    toast(`Added "${recipeName}" ingredients to ${listName}`);
+    // Refresh shopping list if we're viewing the same one
+    if (listId === activeListId) refreshList();
+  } catch (err) {
+    toast('Failed to add ingredients');
   }
 }
 
@@ -530,6 +589,71 @@ function showMealPlanError(msg) {
   `;
   initIcons();
   setTimeout(() => { el.innerHTML = ''; }, 4000);
+}
+
+// ─── Ingredient viewer modal ───
+async function openIngredientModal(slug, name, recipeId) {
+  const modal = document.getElementById('ingredient-modal');
+  const title = document.getElementById('ingredient-modal-title');
+  const list = document.getElementById('ingredient-list');
+  const footer = document.getElementById('ingredient-modal-footer');
+
+  title.textContent = name;
+  list.innerHTML = '<div class="ingredient-loading"><span class="spinner"></span> Loading ingredients...</div>';
+  footer.style.display = recipeId ? '' : 'none';
+  modal.classList.add('visible');
+  initIcons();
+
+  if (recipeId) {
+    const btn = document.getElementById('ingredient-add-btn');
+    btn.onclick = () => {
+      closeIngredientModal();
+      addRecipeToShoppingList(recipeId, name);
+    };
+  }
+
+  try {
+    const recipe = await api(`/recipes/${slug}`);
+    const ingredients = recipe.recipeIngredient || [];
+
+    if (ingredients.length === 0) {
+      list.innerHTML = '<div class="ingredient-empty">No ingredients listed</div>';
+      return;
+    }
+
+    list.innerHTML = ingredients.map(ing => {
+      if (ing.title) {
+        return `<div class="ingredient-item" style="font-weight:600;color:var(--text-muted);font-size:13px;text-transform:uppercase;letter-spacing:0.5px;padding:10px 16px 4px">${escHtml(ing.title)}</div>`;
+      }
+      const display = formatIngredient(ing);
+      return `<div class="ingredient-item">${display}</div>`;
+    }).join('');
+  } catch (err) {
+    list.innerHTML = '<div class="ingredient-empty">Failed to load ingredients</div>';
+  }
+}
+
+function formatIngredient(ing) {
+  // Use the display field if available (pre-formatted by Mealie)
+  if (ing.display) return escHtml(ing.display);
+
+  // Fallback: build from structured fields
+  let parts = [];
+  if (ing.quantity && ing.quantity > 0) {
+    let qty = ing.quantity % 1 === 0 ? String(ing.quantity) : String(ing.quantity);
+    if (ing.unit?.name) qty += ' ' + ing.unit.name;
+    parts.push(`<span class="ingredient-qty">${escHtml(qty)}</span>`);
+  }
+  if (ing.food?.name) {
+    parts.push(`<span class="ingredient-name">${escHtml(ing.food.name)}</span>`);
+  } else if (ing.note) {
+    parts.push(`<span class="ingredient-name">${escHtml(ing.note)}</span>`);
+  }
+  return parts.join(' ') || escHtml(ing.note || '(unnamed)');
+}
+
+function closeIngredientModal() {
+  document.getElementById('ingredient-modal').classList.remove('visible');
 }
 
 // ═══════════════════════════════════
@@ -643,7 +767,7 @@ function renderShoppingList() {
       <div class="checked-section">
         <div class="checked-header">
           <span>Checked (${checked.length})</span>
-          <button class="btn btn-outline btn-sm" onclick="clearCheckedItems()">Clear checked</button>
+          <button id="clear-checked-btn" class="btn btn-outline btn-sm" onclick="clearCheckedItems()">Clear checked</button>
         </div>
         ${sortedChecked.map(i => renderItem(i, true)).join('')}
       </div>
@@ -765,6 +889,16 @@ async function clearCheckedItems() {
   const checked = activeListItems.filter(i => i.checked);
   if (checked.length === 0) return;
 
+  // Optimistic UI: remove checked items and show button feedback immediately
+  const btn = document.getElementById('clear-checked-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Clearing...';
+  }
+  activeListItems = activeListItems.filter(i => !i.checked);
+  renderShoppingList();
+
+  // Delete from server in background
   for (const item of checked) {
     try {
       await api(`/households/shopping/items/${item.id}`, { method: 'DELETE' });
@@ -773,8 +907,6 @@ async function clearCheckedItems() {
     }
   }
 
-  activeListItems = activeListItems.filter(i => !i.checked);
-  renderShoppingList();
   toast(`Cleared ${checked.length} items`);
 }
 
