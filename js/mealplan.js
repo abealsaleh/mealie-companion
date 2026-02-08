@@ -207,6 +207,7 @@ export async function submitMealPlan() {
 
   try {
     let slug;
+    let newlyCreated = false;
 
     if (isUrl(val)) {
       loading.querySelector('span').nextSibling.textContent = ' Importing from URL...';
@@ -219,11 +220,17 @@ export async function submitMealPlan() {
       loading.querySelector('span').nextSibling.textContent = ' Creating recipe...';
       const result = await api('/recipes', { method: 'POST', body: { name: val } });
       slug = typeof result === 'string' ? result : result.slug || result;
+      newlyCreated = true;
     }
 
     // Shared slug cleanup + recipe fetch (DRY #13/#14)
     if (typeof slug === 'string') slug = slug.replace(/^"|"$/g, '');
     const recipe = await api(`/recipes/${slug}`);
+
+    // Mealie populates new recipes with a default placeholder ingredient — clear it
+    if (newlyCreated && recipe.recipeIngredient?.length) {
+      await api(`/recipes/${slug}`, { method: 'PATCH', body: { recipeIngredient: [] } });
+    }
     const recipeId = recipe.id;
     const recipeName = recipe.name;
 

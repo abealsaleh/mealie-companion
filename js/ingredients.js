@@ -41,10 +41,6 @@ export async function openIngredientModal(slug, name, recipeId) {
   }
 
   const ingredients = recipe.recipeIngredient || [];
-  if (ingredients.length === 0) {
-    list.innerHTML = '<div class="ingredient-empty">No ingredients listed</div>';
-    return;
-  }
 
   state.loadedIngredients = ingredients.map(ing => ({
     _orig: ing,
