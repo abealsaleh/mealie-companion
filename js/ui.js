@@ -9,7 +9,7 @@ export function toast(msg) {
 
 // DRY #5: unified HTML/attribute escaping (escHtml + escAttr merged)
 export function esc(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 export function isUrl(s) {
@@ -89,7 +89,7 @@ export function showListPicker(onSelect) {
   state.listPickerKbIndex = -1;
   const listEl = document.getElementById('list-picker-options');
   listEl.innerHTML = state.shoppingLists.map(l => `
-    <div class="label-modal-item" onclick="pickList('${l.id}','${esc(l.name)}')">
+    <div class="label-modal-item" data-action="pick-list" data-list-id="${l.id}" data-list-name="${esc(l.name)}">
       <span class="lm-check">${l.id === state.activeListId ? '✓' : ''}</span> ${esc(l.name)}
     </div>
   `).join('');

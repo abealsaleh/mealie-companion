@@ -103,11 +103,11 @@ function renderMealPlan(rangeStart, entries) {
           html += `
             <div class="mp-entry">
               <span class="mp-entry-icon"><i data-lucide="${icon}" style="width:16px;height:16px"></i></span>
-              <span class="mp-entry-name ${recipeSlug ? 'clickable' : ''}" ${recipeSlug ? `onclick="openIngredientModal('${esc(recipeSlug)}','${esc(name)}','${recipeId}')"` : ''}>${esc(name)}</span>
-              ${recipeId ? `<button class="mp-entry-action" onclick="event.stopPropagation();addRecipeToShoppingList('${recipeId}','${esc(name)}')" title="Add to shopping list">
+              <span class="mp-entry-name ${recipeSlug ? 'clickable' : ''}" ${recipeSlug ? `data-action="open-ingredients" data-slug="${esc(recipeSlug)}" data-name="${esc(name)}" data-recipe-id="${recipeId}"` : ''}>${esc(name)}</span>
+              ${recipeId ? `<button class="mp-entry-action" data-action="add-to-list" data-recipe-id="${recipeId}" data-name="${esc(name)}" title="Add to shopping list">
                 <i data-lucide="shopping-cart" style="width:14px;height:14px"></i>
               </button>` : ''}
-              <button class="mp-entry-action mp-entry-delete" onclick="event.stopPropagation();deleteMealEntry(${entry.id})" title="Remove">
+              <button class="mp-entry-action mp-entry-delete" data-action="delete-entry" data-entry-id="${entry.id}" title="Remove">
                 <i data-lucide="x" style="width:14px;height:14px"></i>
               </button>
             </div>
@@ -174,7 +174,7 @@ async function searchRecipes(query) {
       return;
     }
     resultsEl.innerHTML = items.map(r => `
-      <div class="item" onclick="selectRecipe('${esc(r.slug)}', '${esc(r.name)}')">
+      <div class="item" data-action="select-recipe" data-slug="${esc(r.slug)}" data-name="${esc(r.name)}">
         ${esc(r.name)}
         <div class="slug">${esc(r.slug)}</div>
       </div>

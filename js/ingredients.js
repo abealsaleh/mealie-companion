@@ -96,27 +96,27 @@ export function renderIngredientList() {
         `<option value="${u.id}" ${u.id === ing.unitId ? 'selected' : ''}>${esc(u.name)}</option>`
       ).join('');
       return `<div class="ingredient-item ingredient-editing">
-        <input type="checkbox" class="ingredient-cb" ${checked} onchange="toggleIngredient(${i})">
+        <input type="checkbox" class="ingredient-cb" ${checked} data-on-change="ing-toggle" data-idx="${i}">
         <div class="ingredient-edit-fields">
           <div class="ingredient-edit-row">
             <input type="number" class="ing-edit-input ing-edit-qty" value="${esc(String(qtyVal))}" placeholder="Qty" step="any"
-                   onchange="setIngredientQty(${i},this.value)">
-            <select class="ing-edit-input ing-edit-unit" onchange="setIngredientUnit(${i},this.value)">
+                   data-on-change="ing-qty" data-idx="${i}">
+            <select class="ing-edit-input ing-edit-unit" data-on-change="ing-unit" data-idx="${i}">
               <option value="">no unit</option>
               ${unitOptions}
             </select>
           </div>
           <div class="ing-edit-name-wrap">
             <input type="text" class="ing-edit-input ing-edit-name" value="${esc(ing.name)}" placeholder="Item name"
-                   oninput="onIngEditName(${i}, this.value)" onchange="setIngredientName(${i},this.value)" autocomplete="off">
+                   data-on-input="ing-edit-name" data-on-change="ing-name" data-idx="${i}" autocomplete="off">
             <div class="ing-edit-ac" id="ing-edit-ac-${i}"></div>
           </div>
           <input type="text" class="ing-edit-input ing-edit-note" value="${esc(ing.ingNote || '')}" placeholder="Note (e.g. diced, boneless)"
-                 onchange="setIngredientNote(${i},this.value)">
+                 data-on-change="ing-note" data-idx="${i}">
           ${ingLinkBadge(ing)}
           <div class="ingredient-edit-actions">
-            <button class="btn btn-outline btn-sm ing-edit-delete" onclick="removeIngredient(${i})"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Remove</button>
-            <button class="btn btn-outline btn-sm ing-edit-done" onclick="closeIngredientEdit()">Done</button>
+            <button class="btn btn-outline btn-sm ing-edit-delete" data-action="remove-ingredient" data-idx="${i}"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Remove</button>
+            <button class="btn btn-outline btn-sm ing-edit-done" data-action="close-ingredient-edit">Done</button>
           </div>
         </div>
       </div>`;
@@ -125,16 +125,16 @@ export function renderIngredientList() {
     const display = ingredientDisplayText(ing);
     const badge = ingLinkBadge(ing);
     return `<div class="ingredient-item">
-      <input type="checkbox" class="ingredient-cb" ${checked} onchange="toggleIngredient(${i})">
+      <input type="checkbox" class="ingredient-cb" ${checked} data-on-change="ing-toggle" data-idx="${i}">
       <div class="ingredient-display-wrap">
         <span class="ingredient-display">${esc(display)}</span>
         ${badge}
       </div>
-      <button class="ingredient-edit-btn" onclick="openIngredientEdit(${i})" title="Edit"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+      <button class="ingredient-edit-btn" data-action="open-ingredient-edit" data-idx="${i}" title="Edit"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
     </div>`;
   }).join('');
 
-  list.innerHTML += `<div class="ingredient-add-row" onclick="addIngredientRow()">
+  list.innerHTML += `<div class="ingredient-add-row" data-action="add-ingredient-row">
     <i data-lucide="plus" style="width:16px;height:16px"></i> Add item
   </div>`;
   initIcons();
@@ -223,12 +223,12 @@ async function searchIngEditFoods(idx, query) {
     const rawVal = state.loadedIngredients[idx]?.name || query;
     let html = foods.map(f => {
       const labelName = f.label?.name || '';
-      return `<div class="ac-item" onclick="selectIngEditFood(${idx}, '${f.id}', '${esc(f.name)}', '${esc(labelName)}')">
+      return `<div class="ac-item" data-action="select-ing-food" data-idx="${idx}" data-food-id="${f.id}" data-food-name="${esc(f.name)}" data-label-name="${esc(labelName)}">
         ${esc(f.name)}
         ${labelName ? `<span class="ac-label">${esc(labelName)}</span>` : ''}
       </div>`;
     }).join('');
-    html += `<div class="ac-item ac-new" onclick="createIngEditFood(${idx}, '${esc(rawVal)}')">+ Add "${esc(rawVal)}" as new food</div>`;
+    html += `<div class="ac-item ac-new" data-action="create-ing-food" data-idx="${idx}" data-name="${esc(rawVal)}">+ Add "${esc(rawVal)}" as new food</div>`;
     dropdown.innerHTML = html;
     dropdown.classList.add('visible');
   } catch (e) {

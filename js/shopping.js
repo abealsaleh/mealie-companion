@@ -95,7 +95,7 @@ export function renderShoppingList() {
     const items = groups[groupName];
     html += `
       <div class="category-group">
-        <div class="category-header" onclick="this.classList.toggle('collapsed')">
+        <div class="category-header" data-action="collapse-toggle">
           <span class="arrow">\u25BC</span>
           <span class="cat-name">${esc(groupName)}</span>
           <span class="cat-count">${items.length}</span>
@@ -117,7 +117,7 @@ export function renderShoppingList() {
       <div class="checked-section">
         <div class="checked-header">
           <span>Checked (${checked.length})</span>
-          <button id="clear-checked-btn" class="btn btn-outline btn-sm" onclick="clearCheckedItems()">Clear checked</button>
+          <button id="clear-checked-btn" class="btn btn-outline btn-sm" data-action="clear-checked">Clear checked</button>
         </div>
         ${sortedChecked.map(i => renderItem(i, true)).join('')}
       </div>
@@ -138,18 +138,18 @@ function renderItem(item, isChecked) {
   const hasNote = isFoodLinked && !!itemNote;
   return `
     <div class="shop-item ${isChecked ? 'checked' : ''}">
-      <div class="check-circle" onclick="toggleItem('${item.id}', ${!isChecked})"></div>
-      <span class="item-text" onclick="toggleItem('${item.id}', ${!isChecked})">${esc(name)}${inlineNote ? ` <span style="color:var(--text-dim);font-size:13px">(${esc(inlineNote)})</span>` : ''}</span>
+      <div class="check-circle" data-action="toggle-item" data-item-id="${item.id}" data-checked="${!isChecked}"></div>
+      <span class="item-text" data-action="toggle-item" data-item-id="${item.id}" data-checked="${!isChecked}">${esc(name)}${inlineNote ? ` <span style="color:var(--text-dim);font-size:13px">(${esc(inlineNote)})</span>` : ''}</span>
       <div class="item-actions">
         <div class="qty-stepper">
-          <button onclick="event.stopPropagation();adjustQty('${item.id}',-1)" title="Decrease">\u2212</button>
+          <button data-action="adjust-qty" data-item-id="${item.id}" data-delta="-1" title="Decrease">\u2212</button>
           <span class="qty-val">${qty}</span>
-          <button onclick="event.stopPropagation();adjustQty('${item.id}',1)" title="Increase">+</button>
+          <button data-action="adjust-qty" data-item-id="${item.id}" data-delta="1" title="Increase">+</button>
         </div>
-        ${isFoodLinked ? `<button class="item-note-btn ${hasNote ? 'has-note' : ''}" onclick="event.stopPropagation();openNoteModal('${item.id}')" title="${hasNote ? 'Edit note' : 'Add note'}">
+        ${isFoodLinked ? `<button class="item-note-btn ${hasNote ? 'has-note' : ''}" data-action="open-note" data-item-id="${item.id}" title="${hasNote ? 'Edit note' : 'Add note'}">
           <i data-lucide="message-square" style="width:14px;height:14px"></i>
         </button>` : ''}
-        <button class="item-label-btn" onclick="event.stopPropagation();openLabelModal('${item.id}')">${labelName ? esc(labelName) : 'No label'}</button>
+        <button class="item-label-btn" data-action="open-label" data-item-id="${item.id}">${labelName ? esc(labelName) : 'No label'}</button>
       </div>
     </div>
   `;
@@ -270,15 +270,14 @@ async function searchFoods(query) {
     const rawVal = document.getElementById('add-item-input').value.trim();
     let html = foods.map(f => {
       const labelName = f.label?.name || '';
-      const fData = esc(JSON.stringify({ id: f.id, name: f.name, labelId: f.labelId || '' }));
       return `
-        <div class="ac-item" onclick='selectFoodItem(${fData})'>
+        <div class="ac-item" data-action="select-food" data-food-id="${f.id}" data-food-name="${esc(f.name)}" data-food-label-id="${f.labelId || ''}">
           ${esc(f.name)}
           ${labelName ? `<span class="ac-label">${esc(labelName)}</span>` : ''}
         </div>
       `;
     }).join('');
-    html += `<div class="ac-item ac-new" onclick="addItemDirect()">+ Add "${esc(rawVal)}" as new item</div>`;
+    html += `<div class="ac-item ac-new" data-action="add-direct">+ Add "${esc(rawVal)}" as new item</div>`;
     dropdown.innerHTML = html;
     dropdown.classList.add('visible');
   } catch (e) {
@@ -382,12 +381,12 @@ export function openLabelModal(itemId) {
   document.getElementById('label-modal-title').textContent = name;
 
   const list = document.getElementById('label-modal-list');
-  let html = `<div class="label-modal-item ${!currentLabelId ? 'active' : ''}" onclick="setItemLabel(null)">
+  let html = `<div class="label-modal-item ${!currentLabelId ? 'active' : ''}" data-action="set-label" data-label-id="">
     <span class="lm-check">${!currentLabelId ? '\u2713' : ''}</span> No label
   </div>`;
   state.allLabels.sort((a, b) => a.name.localeCompare(b.name)).forEach(l => {
     const isActive = currentLabelId === l.id;
-    html += `<div class="label-modal-item ${isActive ? 'active' : ''}" onclick="setItemLabel('${l.id}')">
+    html += `<div class="label-modal-item ${isActive ? 'active' : ''}" data-action="set-label" data-label-id="${l.id}">
       <span class="lm-check">${isActive ? '\u2713' : ''}</span> ${esc(l.name)}
     </div>`;
   });
