@@ -64,6 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!e.target.closest('.add-modal-body')) {
       document.getElementById('autocomplete-dropdown').classList.remove('visible');
     }
+    // Close ingredient editor autocomplete on outside tap
+    if (!e.target.closest('.ing-edit-name-wrap')) {
+      document.querySelectorAll('.ing-edit-ac.visible').forEach(el => el.classList.remove('visible'));
+    }
   });
 });
 
@@ -650,6 +654,10 @@ async function openIngredientModal(slug, name, recipeId) {
     unitName: ing.unit?.name || '',
     foodId: ing.food?.id || '',
     name: ing.food?.name || ing.note || ing.display || '',
+    labelName: ing.food?.label?.name || '',
+    // note field: when food is linked, the recipe note is a real note (e.g. "diced");
+    // when no food, note was used as the item name so there's no separate note
+    ingNote: ing.food ? (ing.note || '') : '',
   }));
   ingredientChecked = loadedIngredients.map(ing => !ing.isTitle);
   renderIngredientList();
@@ -664,7 +672,19 @@ function ingredientDisplayText(ing) {
     parts.push(q);
   }
   if (ing.name) parts.push(ing.name);
-  return parts.join(' ') || '(unnamed)';
+  let text = parts.join(' ') || '(unnamed)';
+  if (ing.ingNote) text += ` (${ing.ingNote})`;
+  return text;
+}
+
+function ingLinkBadge(ing) {
+  if (ing.foodId && ing.labelName) {
+    return `<span class="ing-badge ing-badge-linked">${escHtml(ing.labelName)}</span>`;
+  }
+  if (ing.foodId) {
+    return `<span class="ing-badge ing-badge-linked">Linked</span>`;
+  }
+  return `<span class="ing-badge ing-badge-unlinked">Not linked</span>`;
 }
 
 function renderIngredientList() {
@@ -692,8 +712,14 @@ function renderIngredientList() {
               ${unitOptions}
             </select>
           </div>
-          <input type="text" class="ing-edit-name" value="${escAttr(ing.name)}" placeholder="Item name"
-                 onchange="loadedIngredients[${i}].name=this.value.trim()">
+          <div class="ing-edit-name-wrap">
+            <input type="text" class="ing-edit-name" value="${escAttr(ing.name)}" placeholder="Item name"
+                   oninput="onIngEditName(${i}, this.value)" onchange="loadedIngredients[${i}].name=this.value.trim()" autocomplete="off">
+            <div class="ing-edit-ac" id="ing-edit-ac-${i}"></div>
+          </div>
+          <input type="text" class="ing-edit-note" value="${escAttr(ing.ingNote || '')}" placeholder="Note (e.g. diced, boneless)"
+                 onchange="loadedIngredients[${i}].ingNote=this.value.trim()">
+          ${ingLinkBadge(ing)}
           <div class="ingredient-edit-actions">
             <button class="btn btn-outline btn-sm ing-edit-delete" onclick="removeIngredient(${i})"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Remove</button>
             <button class="btn btn-outline btn-sm ing-edit-done" onclick="ingredientEditing=-1;renderIngredientList()">Done</button>
@@ -704,9 +730,13 @@ function renderIngredientList() {
 
     // Display mode
     const display = ingredientDisplayText(ing);
+    const badge = ingLinkBadge(ing);
     return `<div class="ingredient-item">
       <input type="checkbox" class="ingredient-cb" ${checked} onchange="toggleIngredient(${i})">
-      <span class="ingredient-display">${escHtml(display)}</span>
+      <div class="ingredient-display-wrap">
+        <span class="ingredient-display">${escHtml(display)}</span>
+        ${badge}
+      </div>
       <button class="ingredient-edit-btn" onclick="openIngredientEdit(${i})" title="Edit"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
     </div>`;
   }).join('');
@@ -719,7 +749,7 @@ function renderIngredientList() {
 }
 
 function addIngredientRow() {
-  const newIng = { isTitle: false, title: '', qty: null, unitId: '', unitName: '', foodId: '', name: '' };
+  const newIng = { isTitle: false, title: '', qty: null, unitId: '', unitName: '', foodId: '', name: '', labelName: '', ingNote: '' };
   loadedIngredients.push(newIng);
   ingredientChecked.push(true);
   ingredientEditing = loadedIngredients.length - 1;
@@ -748,6 +778,96 @@ function openIngredientEdit(idx) {
     const el = document.querySelector('.ing-edit-name');
     if (el) el.focus();
   }, 50);
+}
+
+let ingEditAcTimeout = null;
+
+function onIngEditName(idx, value) {
+  const val = value.trim();
+  const dropdown = document.getElementById(`ing-edit-ac-${idx}`);
+  // Clear food link when user types (they may be changing the food)
+  loadedIngredients[idx].foodId = '';
+  loadedIngredients[idx].labelName = '';
+  loadedIngredients[idx].name = val;
+
+  if (val.length < 2) {
+    dropdown.classList.remove('visible');
+    return;
+  }
+  clearTimeout(ingEditAcTimeout);
+  ingEditAcTimeout = setTimeout(() => searchIngEditFoods(idx, val), 200);
+}
+
+async function searchIngEditFoods(idx, query) {
+  const dropdown = document.getElementById(`ing-edit-ac-${idx}`);
+  if (!dropdown) return;
+  try {
+    const data = await api(`/foods?search=${encodeURIComponent(query)}&perPage=25&page=1`);
+    let foods = data.items || [];
+    // Sort: exact match first, then prefix matches, then the rest
+    const q = query.toLowerCase();
+    foods.sort((a, b) => {
+      const aName = a.name.toLowerCase(), bName = b.name.toLowerCase();
+      const aExact = aName === q, bExact = bName === q;
+      if (aExact !== bExact) return aExact ? -1 : 1;
+      const aPrefix = aName.startsWith(q), bPrefix = bName.startsWith(q);
+      if (aPrefix !== bPrefix) return aPrefix ? -1 : 1;
+      return 0;
+    });
+    foods = foods.slice(0, 8);
+    const rawVal = loadedIngredients[idx]?.name || query;
+    let html = foods.map(f => {
+      const labelName = f.label?.name || '';
+      return `<div class="ac-item" onclick="selectIngEditFood(${idx}, '${f.id}', '${escAttr(f.name)}', '${escAttr(labelName)}')">
+        ${escHtml(f.name)}
+        ${labelName ? `<span class="ac-label">${escHtml(labelName)}</span>` : ''}
+      </div>`;
+    }).join('');
+    html += `<div class="ac-item ac-new" onclick="createIngEditFood(${idx}, '${escAttr(rawVal)}')">+ Add "${escHtml(rawVal)}" as new food</div>`;
+    dropdown.innerHTML = html;
+    dropdown.classList.add('visible');
+  } catch (e) {
+    dropdown.classList.remove('visible');
+  }
+}
+
+function selectIngEditFood(idx, foodId, foodName, labelName) {
+  loadedIngredients[idx].foodId = foodId;
+  loadedIngredients[idx].name = foodName;
+  loadedIngredients[idx].labelName = labelName || '';
+  dismissIngEditAc(idx);
+  renderIngredientList();
+}
+
+function dismissIngEditAc(idx) {
+  const dropdown = document.getElementById(`ing-edit-ac-${idx}`);
+  if (dropdown) dropdown.classList.remove('visible');
+}
+
+async function createIngEditFood(idx, name) {
+  dismissIngEditAc(idx);
+  try {
+    // Search for existing food first to avoid UNIQUE constraint errors
+    const data = await api(`/foods?search=${encodeURIComponent(name)}&perPage=10&page=1`);
+    const foods = data.items || [];
+    const exact = foods.find(f => f.name.toLowerCase() === name.toLowerCase());
+    if (exact) {
+      loadedIngredients[idx].foodId = exact.id;
+      loadedIngredients[idx].name = exact.name;
+      loadedIngredients[idx].labelName = exact.label?.name || '';
+      renderIngredientList();
+      toast(`Linked to "${exact.name}"`);
+      return;
+    }
+    const newFood = await api('/foods', { method: 'POST', body: { name } });
+    loadedIngredients[idx].foodId = newFood.id;
+    loadedIngredients[idx].name = newFood.name;
+    loadedIngredients[idx].labelName = '';
+    renderIngredientList();
+    toast(`Created "${name}"`);
+  } catch (e) {
+    toast('Failed to create food');
+  }
 }
 
 function setIngredientUnit(idx, unitId) {
@@ -812,8 +932,13 @@ async function doAddCheckedIngredients(listId, listName) {
       const body = { shoppingListId: listId, checked: false };
       if (!ing.name) continue;
 
-      if (ing.foodId) {
-        body.foodId = ing.foodId;
+      // Link to existing food entry for proper category inheritance
+      let foodId = ing.foodId;
+      if (!foodId) {
+        foodId = await findOrCreateFood(ing.name);
+      }
+      if (foodId) {
+        body.foodId = foodId;
       } else {
         body.note = ing.name;
       }
@@ -829,6 +954,8 @@ async function doAddCheckedIngredients(listId, listName) {
         }
       }
 
+      if (ing.ingNote) body.note = ing.ingNote;
+
       await api('/households/shopping/items', { method: 'POST', body });
       added++;
     } catch (e) { /* skip failed items */ }
@@ -836,6 +963,20 @@ async function doAddCheckedIngredients(listId, listName) {
 
   toast(`Added ${added} ingredient${added !== 1 ? 's' : ''} to ${listName}`);
   if (listId === activeListId) refreshList();
+}
+
+async function findOrCreateFood(name) {
+  try {
+    const data = await api(`/foods?search=${encodeURIComponent(name)}&perPage=20&page=1`);
+    const foods = data.items || [];
+    const exact = foods.find(f => f.name.toLowerCase() === name.toLowerCase());
+    if (exact) return exact.id;
+    // No exact match — create a new food entry
+    const newFood = await api('/foods', { method: 'POST', body: { name } });
+    return newFood.id;
+  } catch (e) {
+    return null;
+  }
 }
 
 function closeIngredientModal() {
@@ -868,7 +1009,7 @@ async function saveIngredientsToRecipe() {
       quantity: ing.qty || 0,
       unit: ing.unitId ? { id: ing.unitId, name: ing.unitName } : null,
       food: ing.foodId ? { id: ing.foodId, name: ing.name } : null,
-      note: ing.foodId ? '' : ing.name,
+      note: ing.foodId ? (ing.ingNote || '') : ing.name,
       title: null,
       referenceId: ing._orig?.referenceId || generateUUID(),
     };
@@ -1160,8 +1301,18 @@ async function searchFoods(query) {
   const dropdown = document.getElementById('autocomplete-dropdown');
   acKbIndex = -1;
   try {
-    const data = await api(`/foods?search=${encodeURIComponent(query)}&perPage=8&page=1`);
-    const foods = data.items || [];
+    const data = await api(`/foods?search=${encodeURIComponent(query)}&perPage=25&page=1`);
+    const allFoods = data.items || [];
+    const qLower = query.toLowerCase();
+    allFoods.sort((a, b) => {
+      const aName = a.name.toLowerCase(), bName = b.name.toLowerCase();
+      const aExact = aName === qLower, bExact = bName === qLower;
+      if (aExact !== bExact) return aExact ? -1 : 1;
+      const aPre = aName.startsWith(qLower), bPre = bName.startsWith(qLower);
+      if (aPre !== bPre) return aPre ? -1 : 1;
+      return aName.localeCompare(bName);
+    });
+    const foods = allFoods.slice(0, 8);
 
     const rawVal = document.getElementById('add-item-input').value.trim();
     let html = foods.map(f => {

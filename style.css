@@ -798,9 +798,30 @@ header { flex-shrink: 0; }
   accent-color: var(--accent);
   flex-shrink: 0;
 }
-.ingredient-display {
+.ingredient-display-wrap {
   flex: 1;
+  min-width: 0;
+}
+.ingredient-display {
   font-size: 15px;
+}
+.ing-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.ing-badge-linked {
+  background: var(--accent);
+  color: #fff;
+}
+.ing-badge-unlinked {
+  background: var(--surface2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
 }
 .ingredient-edit-btn {
   background: none;
@@ -868,7 +889,47 @@ header { flex-shrink: 0; }
   outline: none;
   color: inherit;
 }
-.ing-edit-qty:focus, .ing-edit-unit:focus, .ing-edit-name:focus {
+.ing-edit-name-wrap {
+  position: relative;
+  width: 100%;
+}
+.ing-edit-ac {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 10;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.ing-edit-ac.visible { display: block; }
+.ing-edit-ac .ac-item {
+  padding: 8px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ing-edit-ac .ac-item:active { background: var(--surface2); }
+.ing-edit-note {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-style: italic;
+  padding: 5px 8px;
+  outline: none;
+  color: var(--text-muted);
+}
+.ing-edit-qty:focus, .ing-edit-unit:focus, .ing-edit-name:focus, .ing-edit-note:focus {
   border-color: var(--accent);
 }
 .ingredient-edit-actions {
