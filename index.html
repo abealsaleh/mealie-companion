@@ -56,9 +56,9 @@
     </div>
   </div>
   <button class="fab" onclick="toggleAddPanel('mealplan')" id="mp-fab"><i data-lucide="plus" style="width:24px;height:24px"></i></button>
-  <div class="add-modal-overlay" id="mp-add-modal" onclick="if(event.target===this)closeAddPanel('mealplan')">
-    <div class="add-modal">
-      <div class="add-modal-header">
+  <div class="modal-overlay add-modal-overlay" id="mp-add-modal" onclick="if(event.target===this)closeAddPanel('mealplan')">
+    <div class="modal-panel add-modal">
+      <div class="modal-header modal-header-bordered">
         <span>Add to Meal Plan</span>
         <button onclick="closeAddPanel('mealplan')"><i data-lucide="x" style="width:18px;height:18px"></i></button>
       </div>
@@ -114,9 +114,9 @@
     </div>
   </div>
   <button class="fab" onclick="toggleAddPanel('shopping')" id="shop-fab"><i data-lucide="plus" style="width:24px;height:24px"></i></button>
-  <div class="add-modal-overlay" id="shop-add-modal" onclick="if(event.target===this)closeAddPanel('shopping')">
-    <div class="add-modal">
-      <div class="add-modal-header">
+  <div class="modal-overlay add-modal-overlay" id="shop-add-modal" onclick="if(event.target===this)closeAddPanel('shopping')">
+    <div class="modal-panel add-modal">
+      <div class="modal-header modal-header-bordered">
         <span>Add Item</span>
         <button onclick="closeAddPanel('shopping')"><i data-lucide="x" style="width:18px;height:18px"></i></button>
       </div>
@@ -138,9 +138,9 @@
   </div>
 </div>
 
-<div class="label-modal-overlay" id="label-modal" onclick="if(event.target===this)closeLabelModal()">
-  <div class="label-modal">
-    <div class="label-modal-header">
+<div class="modal-overlay" id="label-modal" onclick="if(event.target===this)closeLabelModal()">
+  <div class="modal-panel label-modal">
+    <div class="modal-header modal-header-bordered">
       <span id="label-modal-title">Change Category</span>
       <button onclick="closeLabelModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
     </div>
@@ -151,9 +151,9 @@
   </div>
 </div>
 
-<div class="note-modal-overlay" id="note-modal" onclick="if(event.target===this)closeNoteModal()">
-  <div class="note-modal">
-    <div class="note-modal-header">
+<div class="modal-overlay" id="note-modal" onclick="if(event.target===this)closeNoteModal()">
+  <div class="modal-panel note-modal">
+    <div class="modal-header">
       <span id="note-modal-title">Edit Note</span>
       <button onclick="closeNoteModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
     </div>
@@ -164,9 +164,9 @@
   </div>
 </div>
 
-<div class="label-modal-overlay" id="list-picker-modal" onclick="if(event.target===this)closeListPicker()">
-  <div class="label-modal">
-    <div class="label-modal-header">
+<div class="modal-overlay" id="list-picker-modal" tabindex="-1" onclick="if(event.target===this)closeListPicker()">
+  <div class="modal-panel label-modal">
+    <div class="modal-header modal-header-bordered">
       <span>Add ingredients to...</span>
       <button onclick="closeListPicker()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
     </div>
@@ -174,9 +174,9 @@
   </div>
 </div>
 
-<div class="label-modal-overlay" id="ingredient-modal" onclick="if(event.target===this)closeIngredientModal()">
-  <div class="label-modal ingredient-modal">
-    <div class="label-modal-header">
+<div class="modal-overlay" id="ingredient-modal" onclick="if(event.target===this)closeIngredientModal()">
+  <div class="modal-panel label-modal ingredient-modal">
+    <div class="modal-header modal-header-bordered">
       <span id="ingredient-modal-title">Ingredients</span>
       <button onclick="closeIngredientModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
     </div>
@@ -191,6 +191,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/app.js"></script>
+<script type="module" src="/js/main.js"></script>
 </body>
 </html>

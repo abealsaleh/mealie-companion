@@ -333,9 +333,10 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   color: var(--accent);
   font-weight: 600;
 }
-.autocomplete-dropdown .ac-item.kb-active { background: var(--accent-light); }
-
-.search-results .item.kb-active { background: var(--accent-light); }
+.autocomplete-dropdown .ac-item.kb-active,
+.search-results .item.kb-active,
+.label-modal-item.kb-active,
+.ing-edit-ac .ac-item.kb-active { background: var(--accent-light); }
 
 .category-select-bar {
   display: none;
@@ -500,8 +501,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 }
 .shop-item .item-label-btn:active { background: var(--accent-light); color: var(--accent); }
 
-/* --- Note editor modal --- */
-.note-modal-overlay {
+/* === DRY #18-21: Shared modal styles === */
+.modal-overlay {
   display: none;
   position: fixed;
   inset: 0;
@@ -510,8 +511,9 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   align-items: flex-end;
   justify-content: center;
 }
-.note-modal-overlay.visible { display: flex; }
-.note-modal {
+.modal-overlay.visible { display: flex; }
+
+.modal-panel {
   background: var(--surface);
   border-radius: var(--radius) var(--radius) 0 0;
   width: 100%;
@@ -519,23 +521,32 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   display: flex;
   flex-direction: column;
   box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
-  padding: 16px;
-  gap: 12px;
 }
-.note-modal-header {
+
+.modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-weight: 600;
   font-size: 15px;
 }
-.note-modal-header button {
+.modal-header-bordered {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-header button {
   background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
   display: flex;
+}
+
+/* --- Note editor modal (specific) --- */
+.note-modal {
+  padding: 16px;
+  gap: 12px;
 }
 .note-modal textarea {
   width: 100%;
@@ -551,43 +562,9 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 }
 .note-modal textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 
-/* --- Label picker modal --- */
-.label-modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  z-index: 300;
-  align-items: flex-end;
-  justify-content: center;
-}
-.label-modal-overlay.visible { display: flex; }
+/* --- Label picker modal (specific) --- */
 .label-modal {
-  background: var(--surface);
-  border-radius: var(--radius) var(--radius) 0 0;
-  width: 100%;
-  max-width: 480px;
   max-height: 60vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
-}
-.label-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  font-weight: 600;
-  font-size: 15px;
-}
-.label-modal-header button {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
 }
 .label-modal-search {
   padding: 8px 16px;
@@ -622,6 +599,16 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .label-modal-item .lm-check { width: 18px; color: var(--success); }
 .label-modal-item.lm-create { color: var(--accent); font-weight: 600; }
 .label-modal-item.lm-create .lm-check { color: var(--accent); }
+
+/* --- Add modal (specific + desktop media query) --- */
+.add-modal-body { position: relative; }
+@media (min-width: 481px) {
+  .add-modal-overlay {
+    justify-content: flex-end;
+    padding: 0 24px calc(var(--safe-bottom) + 92px) 0;
+  }
+  .add-modal { border-radius: var(--radius); max-width: 400px; }
+}
 
 .checked-section {
   border-top: 2px solid var(--border);
@@ -688,52 +675,6 @@ header { flex-shrink: 0; }
 }
 .fab:active { transform: scale(0.92); }
 .fab.fab-active svg { transform: rotate(45deg); transition: transform 0.2s; }
-
-/* --- Add modal (bottom sheet) --- */
-.add-modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  z-index: 300;
-  align-items: flex-end;
-  justify-content: center;
-}
-.add-modal-overlay.visible { display: flex; }
-.add-modal {
-  background: var(--surface);
-  border-radius: var(--radius) var(--radius) 0 0;
-  width: 100%;
-  max-width: 480px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
-}
-.add-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  font-weight: 600;
-  font-size: 15px;
-}
-.add-modal-header button {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-}
-.add-modal-body { position: relative; }
-@media (min-width: 481px) {
-  .add-modal-overlay {
-    justify-content: flex-end;
-    padding: 0 24px calc(var(--safe-bottom) + 92px) 0;
-  }
-  .add-modal { border-radius: var(--radius); max-width: 400px; }
-}
 
 /* --- Toast notification --- */
 .toast {
@@ -852,34 +793,9 @@ header { flex-shrink: 0; }
   display: flex;
   gap: 8px;
 }
-.ing-edit-qty {
-  width: 64px;
-  flex-shrink: 0;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: inherit;
-  font-size: 14px;
-  padding: 6px 8px;
-  text-align: center;
-  outline: none;
-  color: inherit;
-}
-.ing-edit-unit {
-  flex: 1;
-  min-width: 0;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: inherit;
-  font-size: 14px;
-  padding: 6px 8px;
-  outline: none;
-  color: inherit;
-  appearance: auto;
-}
-.ing-edit-name {
-  width: 100%;
+
+/* DRY #23: shared ingredient edit input base */
+.ing-edit-input {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -889,6 +805,15 @@ header { flex-shrink: 0; }
   outline: none;
   color: inherit;
 }
+.ing-edit-input:focus {
+  border-color: var(--accent);
+}
+/* Specific overrides */
+.ing-edit-qty { width: 64px; flex-shrink: 0; text-align: center; }
+.ing-edit-unit { flex: 1; min-width: 0; appearance: auto; }
+.ing-edit-name { width: 100%; }
+.ing-edit-note { width: 100%; font-size: 13px; font-style: italic; padding: 5px 8px; color: var(--text-muted); }
+
 .ing-edit-name-wrap {
   position: relative;
   width: 100%;
@@ -917,21 +842,7 @@ header { flex-shrink: 0; }
   align-items: center;
 }
 .ing-edit-ac .ac-item:active { background: var(--surface2); }
-.ing-edit-note {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: inherit;
-  font-size: 13px;
-  font-style: italic;
-  padding: 5px 8px;
-  outline: none;
-  color: var(--text-muted);
-}
-.ing-edit-qty:focus, .ing-edit-unit:focus, .ing-edit-name:focus, .ing-edit-note:focus {
-  border-color: var(--accent);
-}
+
 .ingredient-edit-actions {
   display: flex;
   justify-content: space-between;
