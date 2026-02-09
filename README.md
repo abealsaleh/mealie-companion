@@ -7,6 +7,85 @@ Mealie Companion is a meal planning and shopping list focused UI to enhance [Mea
 1. **Meal Plan** - 8-day rolling view with quick add (paste a URL or search recipes), ingredient viewer, and one-tap add to shopping list
 2. **Shopping List** - OurGroceries-style list with category grouping, autocomplete from Mealie's food database, and tap-to-check
 
+## How It Works
+
+The core workflow: plan your meals for the week, then build your shopping list directly from those recipes.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### Plan your week
+
+See your upcoming meals at a glance. Add recipes by searching your collection or pasting a URL to import from the web. Each day shows meals grouped by type.
+
+<p align="center">
+  <img src="screenshots/mealplan.png" width="250" alt="Meal plan view showing a week of dinners">
+</p>
+
+</td>
+<td width="50%" valign="top">
+
+### Pick what you need from each recipe
+
+Tap any recipe to see its full ingredient list. Every ingredient is linked to Mealie's food database with category labels. Uncheck anything you already have, or edit quantities before adding.
+
+<p align="center">
+  <img src="screenshots/ingredients.png" width="250" alt="Ingredient modal with checkboxes and category badges">
+</p>
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### Send ingredients to any shopping list
+
+Choose which list to add to — keep a weekly grocery run separate from a warehouse store trip or a home improvement list.
+
+<p align="center">
+  <img src="screenshots/list-picker.png" width="250" alt="List picker showing multiple shopping lists">
+</p>
+
+</td>
+<td width="50%" valign="top">
+
+### Shop with a clean, organized list
+
+Items are grouped by category so you can work through the store aisle by aisle. Tap to check off items, adjust quantities, and add notes.
+
+<p align="center">
+  <img src="screenshots/shopping.png" width="250" alt="Shopping list organized by category">
+</p>
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### Quickly add items on the fly
+
+The add panel searches Mealie's food database as you type, so items get linked to the right category automatically. Or just type a name and add it directly.
+
+<p align="center">
+  <img src="screenshots/add-item.png" width="250" alt="Add item panel with food autocomplete">
+</p>
+
+</td>
+<td width="50%" valign="top">
+
+### Sign in with your Mealie account
+
+No API keys to manage — just log in with your existing Mealie credentials. Sessions auto-refresh and persist across PWA restarts.
+
+<p align="center">
+  <img src="screenshots/login.png" width="250" alt="Sign in screen">
+</p>
+
+</td>
+</tr>
+</table>
+
 ## Architecture
 
 Single-page app (HTML/CSS/JS, no build step) served by nginx:alpine. nginx proxies `/api/*` to Mealie to avoid CORS. Both containers share a Docker network.
@@ -85,7 +164,7 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 |------|---------|
 | `index.html` | App markup (HTML only) |
 | `style.css` | All styles |
-| `app.js` | All application logic |
+| `js/` | Application logic (ES modules: state, api, auth, ui, mealplan, shopping, ingredients, main) |
 | `manifest.json` | PWA manifest for home screen install |
 | `sw.js` | Service worker for offline caching of static assets |
 | `nginx.conf` | Reverse proxy config (envsubst template) |
