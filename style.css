@@ -453,10 +453,10 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   background: none;
   border: none;
   color: var(--accent);
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -472,7 +472,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   color: var(--text);
 }
 
-.item-note-btn {
+.item-edit-btn {
   background: none;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -485,21 +485,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   width: 28px;
   height: 28px;
 }
-.item-note-btn:active { background: var(--accent-light); color: var(--accent); }
-.item-note-btn.has-note { color: var(--accent); border-color: var(--accent); }
-
-.shop-item .item-label-btn {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text-muted);
-  font-size: 11px;
-  padding: 3px 8px;
-  cursor: pointer;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.shop-item .item-label-btn:active { background: var(--accent-light); color: var(--accent); }
+.item-edit-btn:active { background: var(--accent-light); color: var(--accent); }
 
 /* === DRY #18-21: Shared modal styles === */
 .modal-overlay {
@@ -543,24 +529,38 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   display: flex;
 }
 
-/* --- Note editor modal (specific) --- */
-.note-modal {
-  padding: 16px;
-  gap: 12px;
+/* --- Edit item modal (specific) --- */
+.edit-item-panel {
+  max-height: 70vh;
 }
-.note-modal textarea {
-  width: 100%;
-  padding: 12px;
+.edit-modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.edit-section-label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 12px 16px 6px;
+}
+#edit-note-input {
+  width: calc(100% - 32px);
+  margin: 0 16px 8px;
+  padding: 10px 12px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 8px;
   color: var(--text);
   font-size: 15px;
   font-family: inherit;
   resize: vertical;
-  min-height: 80px;
+  min-height: 60px;
 }
-.note-modal textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+#edit-note-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 
 /* --- Label picker modal (specific) --- */
 .label-modal {

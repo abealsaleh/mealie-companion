@@ -3,7 +3,7 @@ import { setApiCallbacks } from './api.js';
 import { tryRefreshToken, logout, doLogin, hideSetup, showSetup, setAuthCallbacks } from './auth.js';
 import { toast, switchTab, restoreActiveTab, toggleAddPanel, closeAddPanel, closeListPicker, pickList, initIcons, makeKeyboardNav } from './ui.js';
 import { populateDatePicker, loadMealPlan, submitMealPlan, selectRecipe, deleteMealEntry, addRecipeToShoppingList, onMpInput } from './mealplan.js';
-import { loadLabels, loadShoppingLists, populateCategoryOverride, selectList, refreshList, onAddItemInput, addItemFromInput, addItemDirect, selectFoodItem, toggleItem, adjustQty, openNoteModal, closeNoteModal, saveNote, clearCheckedItems, openLabelModal, closeLabelModal, setItemLabel, filterLabelModal, setupPullToRefresh } from './shopping.js';
+import { loadLabels, loadShoppingLists, populateCategoryOverride, selectList, refreshList, onAddItemInput, addItemFromInput, addItemDirect, selectFoodItem, toggleItem, adjustQty, openEditModal, closeEditModal, clearCheckedItems, setItemLabel, filterEditLabels, setupPullToRefresh } from './shopping.js';
 import { openIngredientModal, closeIngredientModal, toggleIngredient, openIngredientEdit, closeIngredientEdit, setIngredientQty, setIngredientName, setIngredientNote, setIngredientUnit, onIngEditName, selectIngEditFood, createIngEditFood, removeIngredient, addIngredientRow } from './ingredients.js';
 
 // Wire callbacks to break circular dependencies
@@ -22,7 +22,7 @@ Object.assign(window, {
   switchTab, toggleAddPanel, closeAddPanel, closeListPicker,
   loadMealPlan, submitMealPlan,
   selectList, refreshList, onAddItemInput, addItemFromInput,
-  closeNoteModal, saveNote, closeLabelModal, filterLabelModal,
+  closeEditModal, filterEditLabels,
   closeIngredientModal,
 });
 
@@ -37,8 +37,7 @@ const clickActions = {
   // shopping
   'toggle-item': (el) => toggleItem(el.dataset.itemId, el.dataset.checked === 'true'),
   'adjust-qty': (el) => adjustQty(el.dataset.itemId, Number(el.dataset.delta)),
-  'open-note': (el) => openNoteModal(el.dataset.itemId),
-  'open-label': (el) => openLabelModal(el.dataset.itemId),
+  'open-edit': (el) => openEditModal(el.dataset.itemId),
   'clear-checked': () => clearCheckedItems(),
   'select-food': (el) => selectFoodItem({ id: el.dataset.foodId, name: el.dataset.foodName, labelId: el.dataset.foodLabelId || '' }),
   'add-direct': () => addItemDirect(),
@@ -134,12 +133,12 @@ document.addEventListener('DOMContentLoaded', () => {
     onFallbackEnter: submitMealPlan,
   }));
 
-  document.getElementById('label-search-input').addEventListener('keydown', makeKeyboardNav({
-    getDropdown: () => document.getElementById('label-modal-list'),
-    isVisible: () => document.getElementById('label-modal').classList.contains('visible'),
+  document.getElementById('edit-label-search').addEventListener('keydown', makeKeyboardNav({
+    getDropdown: () => document.getElementById('edit-label-list'),
+    isVisible: () => document.getElementById('edit-item-modal').classList.contains('visible'),
     getIndex: () => state.labelKbIndex,
     setIndex: n => { state.labelKbIndex = n; },
-    hideDropdown: () => closeLabelModal(),
+    hideDropdown: () => closeEditModal(),
     itemSelector: '.label-modal-item:not([style*="display: none"])',
   }));
 

@@ -138,29 +138,23 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="label-modal" onclick="if(event.target===this)closeLabelModal()">
-  <div class="modal-panel label-modal">
+<div class="modal-overlay" id="edit-item-modal" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal-panel edit-item-panel">
     <div class="modal-header modal-header-bordered">
-      <span id="label-modal-title">Change Category</span>
-      <button onclick="closeLabelModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+      <span id="edit-modal-title">Edit Item</span>
+      <button onclick="closeEditModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
     </div>
-    <div class="label-modal-search">
-      <input type="text" id="label-search-input" placeholder="Search categories..." oninput="filterLabelModal()" autocomplete="off">
+    <div class="edit-modal-body">
+      <div id="edit-note-section">
+        <label class="edit-section-label">Note</label>
+        <textarea id="edit-note-input" placeholder="Add a note..."></textarea>
+      </div>
+      <label class="edit-section-label">Category</label>
+      <div class="label-modal-search">
+        <input type="text" id="edit-label-search" placeholder="Search categories..." oninput="filterEditLabels()" autocomplete="off">
+      </div>
+      <div class="label-modal-list" id="edit-label-list"></div>
     </div>
-    <div class="label-modal-list" id="label-modal-list"></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="note-modal" onclick="if(event.target===this)closeNoteModal()">
-  <div class="modal-panel note-modal">
-    <div class="modal-header">
-      <span id="note-modal-title">Edit Note</span>
-      <button onclick="closeNoteModal()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
-    </div>
-    <textarea id="note-modal-input" placeholder="Add a note..."></textarea>
-    <button class="btn btn-primary" onclick="saveNote()" style="display:flex;align-items:center;justify-content:center;gap:8px">
-      <i data-lucide="check" class="icon"></i> Save
-    </button>
   </div>
 </div>
 

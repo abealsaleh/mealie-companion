@@ -324,7 +324,7 @@ async function doAddCheckedIngredients(listId, listName) {
       if (ing.qty != null && ing.qty > 0 && ing.unitId) {
         const unitName = (ing.unitName || '').toLowerCase();
         if (SHOPPING_UNITS.has(unitName)) {
-          body.quantity = ing.qty;
+          body.quantity = Math.ceil(ing.qty);
           body.unitId = ing.unitId;
         }
       }

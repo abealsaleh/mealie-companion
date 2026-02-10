@@ -4,8 +4,8 @@ import { toast, esc, initIcons, focusDelayed } from './ui.js';
 
 let selectedFood = null;
 let acSearchTimeout = null;
-let noteEditItemId = null;
-let labelEditItemId = null;
+let editItemId = null;
+let editNoteOriginal = null;
 
 export async function loadLabels() {
   const data = await api('/groups/labels');
@@ -134,8 +134,6 @@ function renderItem(item, isChecked) {
   const itemNote = item.note || '';
   const isFoodLinked = !!item.food?.name;
   const inlineNote = isFoodLinked && itemNote ? itemNote : '';
-  const labelName = item.label?.name || item.food?.label?.name || '';
-  const hasNote = isFoodLinked && !!itemNote;
   return `
     <div class="shop-item ${isChecked ? 'checked' : ''}">
       <div class="check-circle" data-action="toggle-item" data-item-id="${item.id}" data-checked="${!isChecked}"></div>
@@ -146,10 +144,9 @@ function renderItem(item, isChecked) {
           <span class="qty-val">${qty}</span>
           <button data-action="adjust-qty" data-item-id="${item.id}" data-delta="1" title="Increase">+</button>
         </div>
-        ${isFoodLinked ? `<button class="item-note-btn ${hasNote ? 'has-note' : ''}" data-action="open-note" data-item-id="${item.id}" title="${hasNote ? 'Edit note' : 'Add note'}">
-          <i data-lucide="message-square" style="width:14px;height:14px"></i>
-        </button>` : ''}
-        <button class="item-label-btn" data-action="open-label" data-item-id="${item.id}">${labelName ? esc(labelName) : 'No label'}</button>
+        <button class="item-edit-btn" data-action="open-edit" data-item-id="${item.id}" title="Edit item">
+          <i data-lucide="pencil" style="width:14px;height:14px"></i>
+        </button>
       </div>
     </div>
   `;
@@ -192,33 +189,64 @@ export async function adjustQty(itemId, delta) {
   );
 }
 
-export function openNoteModal(itemId) {
-  noteEditItemId = itemId;
+export function openEditModal(itemId) {
+  editItemId = itemId;
   const item = getItem(itemId);
   if (!item) return;
+
+  const isFoodLinked = !!item.food?.name;
   const name = getItemDisplayName(item);
-  document.getElementById('note-modal-title').textContent = name;
-  document.getElementById('note-modal-input').value = item.note || '';
-  document.getElementById('note-modal').classList.add('visible');
-  focusDelayed('#note-modal-input', 100);
+  document.getElementById('edit-modal-title').textContent = name;
+
+  // Note section: only for food-linked items
+  const noteSection = document.getElementById('edit-note-section');
+  if (isFoodLinked) {
+    noteSection.style.display = '';
+    document.getElementById('edit-note-input').value = item.note || '';
+    editNoteOriginal = item.note || '';
+  } else {
+    noteSection.style.display = 'none';
+    editNoteOriginal = null;
+  }
+
+  // Label section
+  const currentLabelId = item.labelId || item.label?.id || item.food?.label?.id || null;
+  const list = document.getElementById('edit-label-list');
+  let html = `<div class="label-modal-item ${!currentLabelId ? 'active' : ''}" data-action="set-label" data-label-id="">
+    <span class="lm-check">${!currentLabelId ? '\u2713' : ''}</span> No label
+  </div>`;
+  state.allLabels.sort((a, b) => a.name.localeCompare(b.name)).forEach(l => {
+    const isActive = currentLabelId === l.id;
+    html += `<div class="label-modal-item ${isActive ? 'active' : ''}" data-action="set-label" data-label-id="${l.id}">
+      <span class="lm-check">${isActive ? '\u2713' : ''}</span> ${esc(l.name)}
+    </div>`;
+  });
+  list.innerHTML = html;
+
+  document.getElementById('edit-item-modal').classList.add('visible');
+  state.labelKbIndex = -1;
+  const searchInput = document.getElementById('edit-label-search');
+  searchInput.value = '';
+  focusDelayed(searchInput, 100);
 }
 
-export function closeNoteModal() {
-  document.getElementById('note-modal').classList.remove('visible');
-  noteEditItemId = null;
-}
+export async function closeEditModal() {
+  document.getElementById('edit-item-modal').classList.remove('visible');
 
-export async function saveNote() {
-  const item = getItem(noteEditItemId);
-  if (!item) return;
-  const newNote = document.getElementById('note-modal-input').value.trim();
-  const oldNote = item.note;
-  closeNoteModal();
-  await updateItem(item.id,
-    item => { item.note = newNote; },
-    item => { item.note = oldNote; },
-    'Failed to update note'
-  );
+  // Auto-save note if changed
+  if (editItemId && editNoteOriginal !== null) {
+    const newNote = document.getElementById('edit-note-input').value.trim();
+    if (newNote !== editNoteOriginal) {
+      await updateItem(editItemId,
+        item => { item.note = newNote; },
+        item => { item.note = editNoteOriginal; },
+        'Failed to update note'
+      );
+    }
+  }
+
+  editItemId = null;
+  editNoteOriginal = null;
 }
 
 export async function clearCheckedItems() {
@@ -355,7 +383,7 @@ export async function addItemFromInput() {
           (i.note && i.note.toLowerCase() === text.toLowerCase())
         )
       );
-      if (added) openLabelModal(added.id);
+      if (added) openEditModal(added.id);
     }
   } catch (err) {
     toast('Failed to add item');
@@ -370,44 +398,12 @@ export function addItemDirect() {
   addItemFromInput();
 }
 
-// --- Label picker modal ---
-export function openLabelModal(itemId) {
-  labelEditItemId = itemId;
+export async function setItemLabel(labelId) {
+  const itemId = editItemId;
   const item = getItem(itemId);
   if (!item) return;
 
-  const currentLabelId = item.labelId || item.label?.id || item.food?.label?.id || null;
-  const name = getItemDisplayName(item);
-  document.getElementById('label-modal-title').textContent = name;
-
-  const list = document.getElementById('label-modal-list');
-  let html = `<div class="label-modal-item ${!currentLabelId ? 'active' : ''}" data-action="set-label" data-label-id="">
-    <span class="lm-check">${!currentLabelId ? '\u2713' : ''}</span> No label
-  </div>`;
-  state.allLabels.sort((a, b) => a.name.localeCompare(b.name)).forEach(l => {
-    const isActive = currentLabelId === l.id;
-    html += `<div class="label-modal-item ${isActive ? 'active' : ''}" data-action="set-label" data-label-id="${l.id}">
-      <span class="lm-check">${isActive ? '\u2713' : ''}</span> ${esc(l.name)}
-    </div>`;
-  });
-  list.innerHTML = html;
-
-  document.getElementById('label-modal').classList.add('visible');
-  state.labelKbIndex = -1;
-  const searchInput = document.getElementById('label-search-input');
-  searchInput.value = '';
-  focusDelayed(searchInput, 100);
-}
-
-export function closeLabelModal() {
-  document.getElementById('label-modal').classList.remove('visible');
-  labelEditItemId = null;
-}
-
-export async function setItemLabel(labelId) {
-  const item = getItem(labelEditItemId);
-  if (!item) return;
-  closeLabelModal();
+  await closeEditModal();
 
   const oldLabelId = item.labelId;
   const oldLabel = item.label;
@@ -441,11 +437,11 @@ export async function setItemLabel(labelId) {
   }
 }
 
-export function filterLabelModal() {
+export function filterEditLabels() {
   state.labelKbIndex = -1;
-  const query = document.getElementById('label-search-input').value.trim();
+  const query = document.getElementById('edit-label-search').value.trim();
   const queryLower = query.toLowerCase();
-  const items = document.querySelectorAll('#label-modal-list .label-modal-item:not(.lm-create)');
+  const items = document.querySelectorAll('#edit-label-list .label-modal-item:not(.lm-create)');
   let exactMatch = false;
   items.forEach(el => {
     const name = el.textContent.toLowerCase().trim();
@@ -453,12 +449,12 @@ export function filterLabelModal() {
     el.style.display = matches ? '' : 'none';
     if (matches && name.replace('\u2713', '').trim() === queryLower) exactMatch = true;
   });
-  let createEl = document.querySelector('#label-modal-list .lm-create');
+  let createEl = document.querySelector('#edit-label-list .lm-create');
   if (query.length >= 2 && !exactMatch) {
     if (!createEl) {
       createEl = document.createElement('div');
       createEl.className = 'label-modal-item lm-create';
-      document.getElementById('label-modal-list').appendChild(createEl);
+      document.getElementById('edit-label-list').appendChild(createEl);
     }
     createEl.innerHTML = `<span class="lm-check">+</span> Create "${esc(query)}"`;
     createEl.onclick = () => createLabel(query);
@@ -475,10 +471,10 @@ async function createLabel(name) {
     state.labelMap[newLabel.id] = newLabel;
     populateCategoryOverride();
     toast(`Created "${name}"`);
-    if (labelEditItemId) {
+    if (editItemId) {
       setItemLabel(newLabel.id);
     } else {
-      closeLabelModal();
+      closeEditModal();
     }
   } catch (err) {
     toast('Failed to create category');
