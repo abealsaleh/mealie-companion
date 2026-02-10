@@ -2,16 +2,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mockFetch, jsonResponse } from './fetch-mock.js';
 import { FOOD_SEARCH } from '../fixtures/data.js';
 
-// Fresh imports per test — state.js reads localStorage at load time
-let api, searchAndSortFoods, findOrCreateFood, state;
+let api, searchAndSortFoods, findOrCreateFood, accessToken;
 
 beforeEach(async () => {
-  // Reset modules so state.js re-evaluates with fresh localStorage
   vi.resetModules();
   localStorage.setItem('mealie_access_token', 'test-token');
-  const stateModule = await import('../../js/state.js');
-  state = stateModule.state;
-  state.accessToken = 'test-token';
+  const signalsModule = await import('../../js/signals.js');
+  accessToken = signalsModule.accessToken;
+  accessToken.value = 'test-token';
   const apiModule = await import('../../js/api.js');
   api = apiModule.api;
   searchAndSortFoods = apiModule.searchAndSortFoods;
@@ -58,7 +56,6 @@ describe('searchAndSortFoods()', () => {
     const results = await searchAndSortFoods('tomato');
     expect(results[0].name).toBe('Tomato');
     expect(results[1].name).toBe('Tomato Paste');
-    // Cherry Tomato and Sun-dried Tomato are "rest" — alphabetical
     expect(results[2].name).toBe('Cherry Tomato');
     expect(results[3].name).toBe('Sun-dried Tomato');
   });
@@ -89,7 +86,6 @@ describe('findOrCreateFood()', () => {
     mockFetch((url, opts) => {
       callCount++;
       if (callCount === 1) return jsonResponse({ items: [] });
-      // POST to create
       return jsonResponse({ id: 'food-new', name: 'Kale' });
     });
     const result = await findOrCreateFood('Kale');

@@ -1,4 +1,4 @@
-import { state } from './state.js';
+import { accessToken } from './signals.js';
 
 // Callbacks set by main.js to break circular deps
 let _tryRefresh = null;
@@ -9,12 +9,11 @@ export function setApiCallbacks({ tryRefresh, onUnauthorized }) {
   _onUnauthorized = onUnauthorized;
 }
 
-// DRY #1/#2: extracted doFetch + parseResponse
 export async function api(path, opts = {}) {
   const doFetch = () => fetch('/api' + path, {
     ...opts,
     headers: {
-      'Authorization': 'Bearer ' + state.accessToken,
+      'Authorization': 'Bearer ' + accessToken.value,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       ...(opts.headers || {}),
@@ -44,7 +43,6 @@ export async function api(path, opts = {}) {
   return parseResponse(resp);
 }
 
-// DRY #7: shared food search + sort (used by shopping and ingredient autocompletes)
 export async function searchAndSortFoods(query, limit = 8) {
   const data = await api(`/foods?search=${encodeURIComponent(query)}&perPage=25&page=1`);
   const foods = data.items || [];
@@ -60,7 +58,6 @@ export async function searchAndSortFoods(query, limit = 8) {
   return foods.slice(0, limit);
 }
 
-// DRY #8: shared find-or-create food (used by shopping add, ingredient add, recipe-to-list)
 export async function findOrCreateFood(name, labelId = null) {
   try {
     const data = await api(`/foods?search=${encodeURIComponent(name)}&perPage=20&page=1`);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PLAN_DAYS, MEAL_ORDER, SHOPPING_UNITS, DAY_NAMES, MONTH_SHORT } from '../../js/state.js';
+import { PLAN_DAYS, MEAL_ORDER, SHOPPING_UNITS, DAY_NAMES, MONTH_SHORT } from '../../js/constants.js';
 
 describe('state constants', () => {
   it('PLAN_DAYS is 8', () => {

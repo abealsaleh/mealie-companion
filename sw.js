@@ -1,8 +1,13 @@
-const CACHE_NAME = 'mealie-companion-v3';
+const CACHE_NAME = 'mealie-companion-v4';
 const STATIC_ASSETS = [
   '/', '/index.html', '/style.css', '/manifest.json',
-  '/js/main.js', '/js/state.js', '/js/api.js', '/js/auth.js',
-  '/js/ui.js', '/js/mealplan.js', '/js/shopping.js', '/js/ingredients.js',
+  '/js/main.js', '/js/app.js', '/js/lib.js', '/js/constants.js',
+  '/js/utils.js', '/js/signals.js', '/js/api.js', '/js/auth.js',
+  '/js/components/Icon.js', '/js/components/Toast.js', '/js/components/Modal.js',
+  '/js/components/Autocomplete.js', '/js/components/LoginForm.js',
+  '/js/components/TabNav.js', '/js/components/MealPlan.js',
+  '/js/components/ShoppingList.js', '/js/components/IngredientModal.js',
+  '/js/components/ListPicker.js',
 ];
 
 self.addEventListener('install', (e) => {

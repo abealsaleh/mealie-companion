@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { esc, isUrl, generateUUID } from '../../js/ui.js';
+import { esc, isUrl, generateUUID } from '../../js/utils.js';
 
 describe('esc()', () => {
   it('escapes HTML entities', () => {

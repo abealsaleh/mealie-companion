@@ -9,7 +9,11 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
+    "@preact/signals": "^2.7.1",
+    "@preact/signals-core": "^1.13.0",
     "happy-dom": "^18.0.1",
+    "htm": "^3.1.1",
+    "preact": "^10.28.3",
     "vitest": "^3.1.1"
   }
 }

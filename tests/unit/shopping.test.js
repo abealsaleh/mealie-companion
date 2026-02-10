@@ -1,16 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SHOPPING_LIST_DETAIL } from '../fixtures/data.js';
-
-let getItemDisplayName, getItem, state;
-
-beforeEach(async () => {
-  vi.resetModules();
-  const stateModule = await import('../../js/state.js');
-  state = stateModule.state;
-  const mod = await import('../../js/shopping.js');
-  getItemDisplayName = mod.getItemDisplayName;
-  getItem = mod.getItem;
-});
+import { getItemDisplayName, getItem } from '../../js/utils.js';
 
 describe('getItemDisplayName()', () => {
   it('returns food name when present', () => {
@@ -37,13 +27,11 @@ describe('getItemDisplayName()', () => {
 
 describe('getItem()', () => {
   it('finds item by id', () => {
-    state.activeListItems = SHOPPING_LIST_DETAIL.listItems;
-    const item = getItem('item-1');
+    const item = getItem('item-1', SHOPPING_LIST_DETAIL.listItems);
     expect(item.food.name).toBe('Chicken Breast');
   });
 
   it('returns undefined for missing id', () => {
-    state.activeListItems = SHOPPING_LIST_DETAIL.listItems;
-    expect(getItem('no-such-id')).toBeUndefined();
+    expect(getItem('no-such-id', SHOPPING_LIST_DETAIL.listItems)).toBeUndefined();
   });
 });

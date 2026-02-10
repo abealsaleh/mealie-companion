@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { formatDateParam, getPlanRange, getRangeLabel } from '../../js/mealplan.js';
-import { PLAN_DAYS } from '../../js/state.js';
+import { formatDateParam, getPlanRange, getRangeLabel } from '../../js/utils.js';
+import { PLAN_DAYS } from '../../js/constants.js';
 
 describe('formatDateParam()', () => {
   it('formats as YYYY-MM-DD', () => {

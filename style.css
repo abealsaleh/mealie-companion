@@ -103,7 +103,12 @@ nav button.active {
   color: var(--text);
   font-size: 16px;
 }
-#setup input[type="text"]:focus, #setup input[type="password"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+/* Shared input focus ring */
+#setup input[type="text"]:focus,
+#setup input[type="password"]:focus,
+.form-group input:focus,
+.form-group select:focus,
+#edit-note-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 
 /* --- Common form elements --- */
 .form-group { padding: 16px; }
@@ -118,7 +123,6 @@ nav button.active {
   font-size: 16px;
   -webkit-appearance: none;
 }
-.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 .form-row { display: flex; gap: 12px; padding: 0 16px 16px; }
 .form-row .form-group { padding: 0; flex: 1; }
 
@@ -146,12 +150,18 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .btn-sm { padding: 8px 16px; font-size: 14px; }
 .btn-danger { background: #c0392b; color: white; }
 
-/* --- Meal Plan Tab --- */
-.mp-plan-scroll {
+/* Shared scrollable container */
+.mp-plan-scroll,
+.shopping-scroll,
+.edit-modal-body,
+.label-modal-list,
+.ingredient-list {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* --- Meal Plan Tab --- */
 
 .mp-range-header {
   display: flex;
@@ -206,15 +216,22 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .mp-entry:last-child { border-bottom: none; }
 .mp-entry-icon { color: var(--accent); flex-shrink: 0; }
 .mp-entry-name { flex: 1; font-size: 15px; }
-.mp-entry-action {
+/* Shared icon-button reset */
+.mp-entry-action,
+.qty-stepper button,
+.modal-header button,
+.header-action-btn,
+.ingredient-edit-btn {
   background: none;
   border: none;
-  color: var(--text-dim);
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
   display: flex;
   align-items: center;
+}
+.mp-entry-action {
+  color: var(--text-dim);
+  padding: 4px;
+  border-radius: 4px;
 }
 .mp-entry-action:active { background: var(--surface2); color: var(--accent); }
 
@@ -275,6 +292,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   margin-right: 8px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+.icon-spin svg { animation: spin 0.6s linear infinite; }
 
 .loading-bar {
   display: none;
@@ -350,9 +368,6 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .category-select-bar select { flex: 1; font-size: 14px; }
 
 .shopping-scroll {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   padding-bottom: 20px;
 }
 
@@ -450,16 +465,11 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   background: var(--surface2);
 }
 .qty-stepper button {
-  background: none;
-  border: none;
   color: var(--accent);
   font-size: 20px;
   font-weight: 700;
   width: 36px;
   height: 36px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
   justify-content: center;
   padding: 0;
 }
@@ -521,12 +531,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   border-bottom: 1px solid var(--border);
 }
 .modal-header button {
-  background: none;
-  border: none;
   color: var(--text-muted);
-  cursor: pointer;
   padding: 4px;
-  display: flex;
 }
 
 /* --- Edit item modal (specific) --- */
@@ -536,9 +542,6 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .edit-modal-body {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 .edit-section-label {
   display: block;
@@ -560,7 +563,6 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   resize: vertical;
   min-height: 60px;
 }
-#edit-note-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 
 /* --- Label picker modal (specific) --- */
 .label-modal {
@@ -580,11 +582,6 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   color: var(--text);
 }
 .label-modal-search input:focus { outline: none; border-color: var(--accent); }
-.label-modal-list {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
 .label-modal-item {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
@@ -640,14 +637,9 @@ header { flex-shrink: 0; }
 .app-title { font-weight: 600; font-size: 17px; }
 .header-actions { display: flex; gap: 4px; }
 .header-action-btn {
-  background: none;
-  border: none;
   color: rgba(255,255,255,0.85);
-  cursor: pointer;
   padding: 6px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
   justify-content: center;
   text-decoration: none;
 }
@@ -709,11 +701,6 @@ header { flex-shrink: 0; }
 .ingredient-modal {
   max-height: 70vh;
 }
-.ingredient-list {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
 .ingredient-item {
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
@@ -765,14 +752,9 @@ header { flex-shrink: 0; }
   border: 1px solid var(--border);
 }
 .ingredient-edit-btn {
-  background: none;
-  border: none;
   color: var(--text-dim);
   padding: 4px;
-  cursor: pointer;
   border-radius: 4px;
-  display: flex;
-  align-items: center;
   flex-shrink: 0;
 }
 .ingredient-edit-btn:active { background: var(--surface2); color: var(--accent); }

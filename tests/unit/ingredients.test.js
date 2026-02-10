@@ -1,16 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { RECIPE_DETAIL } from '../fixtures/data.js';
+import { ingredientDisplayText, ingLinkBadge } from '../../js/utils.js';
 
-let ingredientDisplayText, ingLinkBadge;
-
-beforeEach(async () => {
-  vi.resetModules();
-  const mod = await import('../../js/ingredients.js');
-  ingredientDisplayText = mod.ingredientDisplayText;
-  ingLinkBadge = mod.ingLinkBadge;
-});
-
-// Build test ingredient data from the shared fixture
 function makeIng(overrides = {}) {
   return { qty: null, unitName: '', name: '', ingNote: '', foodId: '', labelName: '', ...overrides };
 }
@@ -58,19 +49,22 @@ describe('ingredientDisplayText()', () => {
 describe('ingLinkBadge()', () => {
   it('shows label name when linked with label', () => {
     const ing = makeIng({ foodId: 'food-1', labelName: 'Meat' });
-    expect(ingLinkBadge(ing)).toContain('Meat');
-    expect(ingLinkBadge(ing)).toContain('ing-badge-linked');
+    const badge = ingLinkBadge(ing);
+    expect(badge.text).toBe('Meat');
+    expect(badge.linked).toBe(true);
   });
 
   it('shows "Linked" when linked without label', () => {
     const ing = makeIng({ foodId: 'food-1', labelName: '' });
-    expect(ingLinkBadge(ing)).toContain('Linked');
-    expect(ingLinkBadge(ing)).toContain('ing-badge-linked');
+    const badge = ingLinkBadge(ing);
+    expect(badge.text).toBe('Linked');
+    expect(badge.linked).toBe(true);
   });
 
   it('shows "Not linked" when not linked', () => {
     const ing = makeIng({ foodId: '', labelName: '' });
-    expect(ingLinkBadge(ing)).toContain('Not linked');
-    expect(ingLinkBadge(ing)).toContain('ing-badge-unlinked');
+    const badge = ingLinkBadge(ing);
+    expect(badge.text).toBe('Not linked');
+    expect(badge.linked).toBe(false);
   });
 });
