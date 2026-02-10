@@ -88,7 +88,7 @@ No API keys to manage — just log in with your existing Mealie credentials. Ses
 
 ## Architecture
 
-Single-page app (HTML/CSS/JS, no build step) served by nginx:alpine. nginx proxies `/api/*` to Mealie to avoid CORS. Both containers share a Docker network.
+Single-page Preact app using htm tagged templates (no build step), served by nginx:alpine. nginx proxies `/api/*` to Mealie to avoid CORS. Both containers share a Docker network.
 
 ## Setup
 
@@ -150,10 +150,9 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 - **Category grouping**: items grouped by label with collapsible sections and orange headers
 - **Add items**: tap the + button to open the add form with autocomplete from Mealie's food database (`/api/foods`); keyboard navigation (arrow keys + Enter) supported
 - **Food linking**: all items are created as food entries so names are stored in `food.name` and the `note` field stays available for actual notes; selecting an existing food links it via `foodId` so the food's label is auto-assigned for category grouping
-- **New items**: uncategorized items automatically prompt for a category after adding
+- **New items**: adding an item without a category automatically opens the edit modal so you can assign one
 - **Quantity stepper**: tap +/− to adjust item quantity inline
-- **Notes**: tap the note icon to add or edit a note on any item; icon highlights when a note exists
-- **Searchable label picker**: tap a label badge to reassign categories; search/filter labels by name; create new categories inline. Changes propagate back to Mealie's food database
+- **Edit modal**: tap the pencil icon on any item to edit its note and reassign its category; search/filter labels by name; create new categories inline. Changes propagate back to Mealie's food database
 - **Tap to check/uncheck**: items move between active and checked sections
 - **Clear checked**: deletes all checked items with optimistic UI feedback
 - **Pull to refresh**: on mobile, pull down to re-fetch
@@ -164,13 +163,14 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 |------|---------|
 | `index.html` | App markup (HTML only) |
 | `style.css` | All styles |
-| `js/` | Application logic (ES modules: state, api, auth, ui, mealplan, shopping, ingredients, main) |
+| `js/` | Application logic (Preact components in `components/`, shared hooks, signals, utils, api, auth) |
 | `tests/` | Unit tests (Vitest) and E2E tests (Playwright) — see [`tests/README.md`](tests/README.md) |
 | `manifest.json` | PWA manifest for home screen install |
 | `sw.js` | Service worker for offline caching of static assets |
 | `nginx.conf` | Reverse proxy config (envsubst template) |
 | `compose.yaml` | Docker Compose deployment |
 | `compose.test.yaml` | Standalone container for E2E tests (no Mealie network required) |
+| `CLAUDE.md` | Testing policy and architecture notes for AI agents and developers |
 
 ## API Endpoints Used
 
