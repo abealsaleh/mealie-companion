@@ -55,7 +55,7 @@ export async function refreshList() {
   }
 }
 
-function getItemDisplayName(item) {
+export function getItemDisplayName(item) {
   if (item.food?.name) return item.food.name;
   if (item.note) return item.note;
   if (item.display) return item.display;
@@ -63,7 +63,7 @@ function getItemDisplayName(item) {
 }
 
 // DRY #16: shared item lookup
-function getItem(itemId) {
+export function getItem(itemId) {
   return state.activeListItems.find(i => i.id === itemId);
 }
 

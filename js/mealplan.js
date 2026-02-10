@@ -6,11 +6,11 @@ import { refreshList } from './shopping.js';
 let searchTimeout = null;
 let selectedSlug = null;
 
-function formatDateParam(d) {
+export function formatDateParam(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-function getPlanRange() {
+export function getPlanRange() {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
@@ -18,7 +18,7 @@ function getPlanRange() {
   return { start, end };
 }
 
-function getRangeLabel() {
+export function getRangeLabel() {
   const { start, end } = getPlanRange();
   return `${MONTH_SHORT[start.getMonth()]} ${start.getDate()} \u2013 ${MONTH_SHORT[end.getMonth()]} ${end.getDate()}`;
 }

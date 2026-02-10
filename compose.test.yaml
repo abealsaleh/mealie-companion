@@ -1,0 +1,8 @@
+services:
+  mealie-companion:
+    image: nginx:alpine
+    container_name: mealie-companion-test
+    ports:
+      - "9944:80"
+    volumes:
+      - .:/usr/share/nginx/html:ro

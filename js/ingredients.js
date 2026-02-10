@@ -59,7 +59,7 @@ export async function openIngredientModal(slug, name, recipeId) {
   updateIngredientAddBtn();
 }
 
-function ingredientDisplayText(ing) {
+export function ingredientDisplayText(ing) {
   let parts = [];
   if (ing.qty != null) {
     let q = ing.qty % 1 === 0 ? String(Math.round(ing.qty)) : String(ing.qty);
@@ -72,7 +72,7 @@ function ingredientDisplayText(ing) {
   return text;
 }
 
-function ingLinkBadge(ing) {
+export function ingLinkBadge(ing) {
   if (ing.foodId && ing.labelName) {
     return `<span class="ing-badge ing-badge-linked">${esc(ing.labelName)}</span>`;
   }

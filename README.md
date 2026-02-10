@@ -165,10 +165,12 @@ Uses Mealie's native OAuth2 password login (`POST /api/auth/token`). Supports us
 | `index.html` | App markup (HTML only) |
 | `style.css` | All styles |
 | `js/` | Application logic (ES modules: state, api, auth, ui, mealplan, shopping, ingredients, main) |
+| `tests/` | Unit tests (Vitest) and E2E tests (Playwright) — see [`tests/README.md`](tests/README.md) |
 | `manifest.json` | PWA manifest for home screen install |
 | `sw.js` | Service worker for offline caching of static assets |
 | `nginx.conf` | Reverse proxy config (envsubst template) |
 | `compose.yaml` | Docker Compose deployment |
+| `compose.test.yaml` | Standalone container for E2E tests (no Mealie network required) |
 
 ## API Endpoints Used
 
