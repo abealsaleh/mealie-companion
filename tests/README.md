@@ -23,15 +23,15 @@ Unit tests live in `tests/unit/` and import source modules from `js/` directly. 
 
 ### What's covered
 
-| Test file | Module | What it tests |
-|-----------|--------|---------------|
-| `state.test.js` | `js/state.js` | Constants: `PLAN_DAYS`, `MEAL_ORDER`, `SHOPPING_UNITS`, `DAY_NAMES`, `MONTH_SHORT` |
-| `ui.test.js` | `js/ui.js` | `esc()` HTML escaping, `isUrl()` detection, `generateUUID()` format and uniqueness |
+| Test file | Module(s) | What it tests |
+|-----------|-----------|---------------|
+| `state.test.js` | `js/constants.js`, `js/signals.js` | Constants (`PLAN_DAYS`, `MEAL_ORDER`, `SHOPPING_UNITS`, `DAY_NAMES`, `MONTH_SHORT`), `SK` storage keys, `labelMap` computed signal |
+| `ui.test.js` | `js/utils.js` | `esc()` HTML escaping, `isUrl()` detection, `generateUUID()` format and uniqueness |
 | `api.test.js` | `js/api.js` | `api()` fetch wrapper (auth headers, JSON body, error throwing), `searchAndSortFoods()` sorting, `findOrCreateFood()` match/create/error paths |
-| `mealplan.test.js` | `js/mealplan.js` | `formatDateParam()` date formatting, `getPlanRange()` range calculation, `getRangeLabel()` label formatting |
-| `shopping.test.js` | `js/shopping.js` | `getItemDisplayName()` fallback chain, `getItem()` lookup |
-| `ingredients.test.js` | `js/ingredients.js` | `ingredientDisplayText()` display string assembly, `ingLinkBadge()` badge HTML |
-| `ingredients-setters.test.js` | `js/ingredients.js` | `setIngredientQty()`, `setIngredientName()`, `setIngredientNote()`, `setIngredientUnit()` |
+| `mealplan.test.js` | `js/utils.js` | `formatDateParam()` date formatting, `getPlanRange()` range calculation, `getRangeLabel()` label formatting |
+| `shopping.test.js` | `js/utils.js` | `getItemDisplayName()` fallback chain, `getItem()` lookup |
+| `ingredients.test.js` | `js/utils.js` | `ingredientDisplayText()` display string assembly, `ingLinkBadge()` badge state |
+| `ingredients-setters.test.js` | `js/utils.js`, `js/signals.js` | `updateSignalArray()` immutability and field updates, ingredient setter patterns (qty, name, note, unit), `onIngEditName` space-preservation regression |
 
 ## E2E tests
 

@@ -140,10 +140,9 @@ export function IngredientModal() {
   };
 
   const onIngEditName = (idx, value) => {
-    const val = value.trim();
-    updateSignalArray(loadedIngredients, idx, { foodId: '', labelName: '', name: val });
+    updateSignalArray(loadedIngredients, idx, { foodId: '', labelName: '', name: value });
     setIngEditIdx(idx);
-    ac.search(val);
+    ac.search(value.trim());
   };
 
   const selectIngEditFood = (idx, foodId, foodName, labelName) => {
