@@ -40,7 +40,7 @@ test.describe('Meal Plan', () => {
     await expect(page.locator('#mp-input')).toHaveValue('Grilled Chicken');
   });
 
-  test('scroll containers have constrained height within viewport', async ({ page }) => {
+  test('scroll containers have constrained height within viewport (regression: #app must be flex container)', async ({ page }) => {
     const layout = await page.evaluate(() => {
       const scroll = document.querySelector('.mp-plan-scroll');
       return {
