@@ -38,6 +38,13 @@ body {
   padding-bottom: var(--safe-bottom);
 }
 
+#app {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
 /* --- Nav Tabs --- */
 nav {
   display: flex;

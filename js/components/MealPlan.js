@@ -11,7 +11,7 @@ import { useAutocomplete } from './Autocomplete.js';
 import { Modal } from './Modal.js';
 import { useRefresh, useTogglePanel } from '../hooks.js';
 
-export function MealPlan({ onOpenIngredients }) {
+export function MealPlan({ onOpenIngredients, active }) {
   const entries = mealPlanEntries.value;
   const [rangeStart, setRangeStart] = useState(null);
   const [selectedSlug, setSelectedSlug] = useState(null);
@@ -215,7 +215,7 @@ export function MealPlan({ onOpenIngredients }) {
   };
 
   return html`
-    <div id="mealplan-tab" class=${`tab active`}>
+    <div id="mealplan-tab" class=${`tab${active ? ' active' : ''}`}>
       <div class="mp-range-header">
         <span id="mp-range-label" style="flex:1;text-align:center">${getRangeLabel()}</span>
         <button class="btn btn-outline btn-sm" onclick=${handleRefresh} disabled=${refreshing}

@@ -40,6 +40,19 @@ test.describe('Meal Plan', () => {
     await expect(page.locator('#mp-input')).toHaveValue('Grilled Chicken');
   });
 
+  test('scroll containers have constrained height within viewport', async ({ page }) => {
+    const layout = await page.evaluate(() => {
+      const scroll = document.querySelector('.mp-plan-scroll');
+      return {
+        scrollClientHeight: scroll.clientHeight,
+        viewportHeight: window.innerHeight,
+      };
+    });
+    // Scroll container must be shorter than viewport (constrained by flex layout)
+    expect(layout.scrollClientHeight).toBeLessThan(layout.viewportHeight);
+    expect(layout.scrollClientHeight).toBeGreaterThan(0);
+  });
+
   test('delete meal plan entry', async ({ page }) => {
     let deleteUrl = null;
     await page.route('**/api/households/mealplans/*', (route, request) => {

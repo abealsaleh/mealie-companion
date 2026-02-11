@@ -84,7 +84,7 @@ async function adjustQty(itemId, delta) {
   );
 }
 
-export function ShoppingList() {
+export function ShoppingList({ active }) {
   const [selectedFood, setSelectedFood] = useState(null);
   const [catBarVisible, setCatBarVisible] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
@@ -388,7 +388,7 @@ export function ShoppingList() {
   const rawVal = inputRef.current?.value?.trim() || '';
 
   return html`
-    <div id="shopping-tab" class="tab active">
+    <div id="shopping-tab" class=${`tab${active ? ' active' : ''}`}>
       <div class="list-header">
         <select id="list-selector" onchange=${(e) => selectList(e.target.value)}>
           ${lists.map(l => html`<option value=${l.id} key=${l.id} selected=${l.id === activeListId.value}>${l.name}</option>`)}
