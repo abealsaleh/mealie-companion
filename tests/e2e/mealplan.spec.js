@@ -53,6 +53,34 @@ test.describe('Meal Plan', () => {
     expect(layout.scrollClientHeight).toBeGreaterThan(0);
   });
 
+  test('touch scrolling works on scroll containers (regression: touch-action:pan-y required)', async ({ page, context }) => {
+    const scroll = page.locator('.mp-plan-scroll');
+    const box = await scroll.boundingBox();
+    const cx = box.x + box.width / 2;
+    const startY = box.y + box.height * 0.75;
+    const endY = box.y + box.height * 0.25;
+
+    const client = await context.newCDPSession(page);
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: cx, y: startY }],
+    });
+    for (let i = 1; i <= 10; i++) {
+      await new Promise(r => setTimeout(r, 30));
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: cx, y: startY + (endY - startY) * (i / 10) }],
+      });
+    }
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchEnd', touchPoints: [],
+    });
+    await page.waitForTimeout(300);
+
+    const scrollTop = await scroll.evaluate(el => el.scrollTop);
+    expect(scrollTop).toBeGreaterThan(0);
+  });
+
   test('delete meal plan entry', async ({ page }) => {
     let deleteUrl = null;
     await page.route('**/api/households/mealplans/*', (route, request) => {
