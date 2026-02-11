@@ -55,10 +55,10 @@ export function App() {
     ${isLoggedIn ? html`<${Header} />` : null}
     <${LoginForm} onLoginSuccess=${onLoginSuccess} />
     ${isLoggedIn ? html`
-      <div style=${tab === 'mealplan' ? '' : 'display:none'}>
+      <div style=${tab === 'mealplan' ? 'display:contents' : 'display:none'}>
         <${MealPlan} onOpenIngredients=${openIngredients} />
       </div>
-      <div style=${tab === 'shopping' ? '' : 'display:none'}>
+      <div style=${tab === 'shopping' ? 'display:contents' : 'display:none'}>
         <${ShoppingList} />
       </div>
       <${IngredientModal} />
