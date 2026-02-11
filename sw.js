@@ -1,8 +1,9 @@
-const CACHE_NAME = 'mealie-companion-v7';
+const CACHE_NAME = 'mealie-companion-v8';
 const STATIC_ASSETS = [
   '/', '/index.html', '/style.css', '/manifest.json',
   '/js/main.js', '/js/app.js', '/js/lib.js', '/js/constants.js',
   '/js/utils.js', '/js/signals.js', '/js/api.js', '/js/auth.js',
+  '/js/hooks.js',
   '/js/components/Icon.js', '/js/components/Toast.js', '/js/components/Modal.js',
   '/js/components/Autocomplete.js', '/js/components/LoginForm.js',
   '/js/components/TabNav.js', '/js/components/MealPlan.js',
@@ -30,16 +31,32 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   // Never cache API calls
   if (url.pathname.startsWith('/api/')) return;
+
+  // Same-origin assets: network-first (always get fresh content, fall back to cache offline)
+  if (url.origin === self.location.origin) {
+    e.respondWith(
+      fetch(e.request).then((resp) => {
+        if (resp.ok) {
+          const clone = resp.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+        }
+        return resp;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Third-party CDN assets: cache-first (immutable versioned URLs)
   e.respondWith(
     caches.match(e.request).then((cached) => {
-      const fetched = fetch(e.request).then((resp) => {
+      if (cached) return cached;
+      return fetch(e.request).then((resp) => {
         if (resp.ok) {
           const clone = resp.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
         }
         return resp;
       });
-      return cached || fetched;
     })
   );
 });

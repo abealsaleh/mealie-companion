@@ -5,5 +5,5 @@ render(html`<${App} />`, document.getElementById('app'));
 
 // Service worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(() => {});
 }
