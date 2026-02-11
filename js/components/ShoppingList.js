@@ -1,7 +1,6 @@
 import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
 import { api, searchAndSortFoods, findOrCreateFood } from '../api.js';
-import { SK } from '../constants.js';
-import { shoppingLists, activeListId, activeListItems, allLabels, labelMap } from '../signals.js';
+import { shoppingLists, activeListId, activeListItems, allLabels, labelMap, listAddPending } from '../signals.js';
 import { getItemDisplayName, getItem as getItemUtil, esc } from '../utils.js';
 import { toast } from './Toast.js';
 import { Icon } from './Icon.js';
@@ -25,18 +24,18 @@ export async function loadShoppingLists() {
 
 export async function refreshList() {
   if (!activeListId.value) return;
+  if (listAddPending.value) return;
   try {
     const data = await api(`/households/shopping/lists/${activeListId.value}`);
     activeListItems.value = data.listItems || [];
   } catch {
-    activeListItems.value = [];
     toast('Failed to load list');
   }
 }
 
 function selectList(id) {
   activeListId.value = id;
-  localStorage.setItem(SK.ACTIVE_LIST, id);
+  activeListItems.value = [];
   refreshList();
 }
 

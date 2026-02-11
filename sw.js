@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mealie-companion-v4';
+const CACHE_NAME = 'mealie-companion-v5';
 const STATIC_ASSETS = [
   '/', '/index.html', '/style.css', '/manifest.json',
   '/js/main.js', '/js/app.js', '/js/lib.js', '/js/constants.js',

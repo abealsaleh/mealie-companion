@@ -1,4 +1,4 @@
-import { accessToken } from './signals.js';
+import { accessToken, shoppingLists, activeListItems, allLabels, allUnits, activeListId, activeTab, mealPlanEntries } from './signals.js';
 import { SK } from './constants.js';
 
 let refreshTimer = null;
@@ -46,6 +46,20 @@ export function scheduleTokenRefresh() {
 export function logout() {
   clearToken();
   clearTimeout(refreshTimer);
+  localStorage.removeItem(SK.CACHE_LISTS);
+  localStorage.removeItem(SK.CACHE_LIST_ITEMS);
+  localStorage.removeItem(SK.CACHE_LABELS);
+  localStorage.removeItem(SK.CACHE_UNITS);
+  localStorage.removeItem(SK.CACHE_MEAL_PLAN);
+  localStorage.removeItem(SK.ACTIVE_LIST);
+  localStorage.removeItem(SK.ACTIVE_TAB);
+  shoppingLists.value = [];
+  activeListItems.value = [];
+  allLabels.value = [];
+  allUnits.value = [];
+  activeListId.value = '';
+  activeTab.value = 'mealplan';
+  mealPlanEntries.value = null;
 }
 
 export async function doLogin(email, password, remember) {

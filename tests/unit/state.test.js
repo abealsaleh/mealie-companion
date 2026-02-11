@@ -40,6 +40,11 @@ describe('SK storage keys', () => {
     expect(SK.ACTIVE_LIST).toBe('mealie_active_list');
     expect(SK.ACTIVE_TAB).toBe('mealie_active_tab');
     expect(SK.REMEMBER).toBe('mealie_remember');
+    expect(SK.CACHE_LISTS).toBe('mealie_cache_lists');
+    expect(SK.CACHE_LIST_ITEMS).toBe('mealie_cache_list_items');
+    expect(SK.CACHE_LABELS).toBe('mealie_cache_labels');
+    expect(SK.CACHE_UNITS).toBe('mealie_cache_units');
+    expect(SK.CACHE_MEAL_PLAN).toBe('mealie_cache_meal_plan');
   });
 
   it('all values are unique', () => {

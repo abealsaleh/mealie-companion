@@ -2,7 +2,7 @@ import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
 import { PLAN_DAYS, MEAL_ORDER, MEAL_ICONS, DAY_NAMES, MONTH_SHORT } from '../constants.js';
 import { formatDateParam, getPlanRange, getRangeLabel, isUrl, esc } from '../utils.js';
 import { api } from '../api.js';
-import { activeListId } from '../signals.js';
+import { activeListId, mealPlanEntries } from '../signals.js';
 import { toast } from './Toast.js';
 import { Icon } from './Icon.js';
 import { showListPicker } from './ListPicker.js';
@@ -12,7 +12,7 @@ import { Modal } from './Modal.js';
 import { useRefresh, useTogglePanel } from '../hooks.js';
 
 export function MealPlan({ onOpenIngredients }) {
-  const [entries, setEntries] = useState(null);
+  const entries = mealPlanEntries.value;
   const [rangeStart, setRangeStart] = useState(null);
   const [selectedSlug, setSelectedSlug] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -23,14 +23,13 @@ export function MealPlan({ onOpenIngredients }) {
   const mealRef = useRef(null);
 
   const loadMealPlan = useCallback(async () => {
-    setEntries(null);
     const { start, end } = getPlanRange();
     setRangeStart(start);
     try {
       const data = await api(`/households/mealplans?start_date=${formatDateParam(start)}&end_date=${formatDateParam(end)}&perPage=50&page=1`);
-      setEntries(data.items || []);
+      mealPlanEntries.value = data.items || [];
     } catch {
-      setEntries([]);
+      if (mealPlanEntries.value === null) mealPlanEntries.value = [];
     }
   }, []);
 

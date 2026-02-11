@@ -1,12 +1,10 @@
 import { html } from '../lib.js';
 import { activeTab } from '../signals.js';
-import { SK } from '../constants.js';
 import { Icon } from './Icon.js';
 import { logout } from '../auth.js';
 
 export function switchTab(name) {
   activeTab.value = name;
-  localStorage.setItem(SK.ACTIVE_TAB, name);
 }
 
 export function Header() {

@@ -68,8 +68,10 @@ test.describe('Ingredients', () => {
       await page.click('[data-action="pick-list"]:first-child');
     }
 
-    // Items should have been posted (3 ingredients in fixture)
-    // Wait for all POST calls to complete
+    // Optimistic toast appears immediately before API calls finish
+    await expect(page.locator('.toast')).toContainText(/Added \d+ ingredient/);
+
+    // Background POSTs still fire
     await page.waitForTimeout(500);
     expect(postCalls).toBeGreaterThan(0);
   });

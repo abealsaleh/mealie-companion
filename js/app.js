@@ -1,6 +1,5 @@
 import { html, useEffect } from './lib.js';
 import { accessToken, activeTab } from './signals.js';
-import { SK } from './constants.js';
 import { setApiCallbacks } from './api.js';
 import { tryRefreshToken, logout, scheduleTokenRefresh } from './auth.js';
 import { toast } from './components/Toast.js';
@@ -33,12 +32,6 @@ async function init() {
 export function App() {
   const isLoggedIn = !!accessToken.value;
   const tab = activeTab.value;
-
-  // Restore saved tab on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(SK.ACTIVE_TAB);
-    if (saved && saved !== 'mealplan') activeTab.value = saved;
-  }, []);
 
   const onLoginSuccess = () => {
     init();

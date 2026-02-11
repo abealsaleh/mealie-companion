@@ -1,6 +1,6 @@
 import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
 import { api, searchAndSortFoods, findOrCreateFood } from '../api.js';
-import { loadedIngredients, ingredientChecked, ingredientEditing, ingredientSlug, allUnits, activeListId } from '../signals.js';
+import { loadedIngredients, ingredientChecked, ingredientEditing, ingredientSlug, allUnits, activeListId, activeListItems, listAddPending } from '../signals.js';
 import { SHOPPING_UNITS } from '../constants.js';
 import { ingredientDisplayText, ingLinkBadge, esc, generateUUID, updateSignalArray } from '../utils.js';
 import { toast } from './Toast.js';
@@ -190,36 +190,67 @@ export function IngredientModal() {
   const addCheckedIngredientsToList = () => {
     setVisible(false);
     saveIngredientsToRecipe();
-    showListPicker(async (listId, listName) => {
-      const items = ings.filter((ing, i) => checked[i] && !ing.isTitle);
-      if (items.length === 0) return;
-      toast(`Adding ${items.length} ingredient${items.length !== 1 ? 's' : ''}...`);
-      let added = 0;
-      for (const ing of items) {
+    // Snapshot checked items before signals change
+    const items = ings.filter((ing, i) => checked[i] && !ing.isTitle && ing.name);
+    if (items.length === 0) return;
+    showListPicker((listId, listName) => {
+      toast(`Added ${items.length} ingredient${items.length !== 1 ? 's' : ''} to ${listName}`);
+
+      // Optimistic UI: inject items into active list immediately
+      if (listId === activeListId.value) {
+        const optimistic = items.map((ing, i) => ({
+          id: `_pending_${Date.now()}_${i}`,
+          checked: false,
+          quantity: (ing.qty != null && ing.qty > 0) ? Math.ceil(ing.qty) : 1,
+          food: ing.foodId ? { id: ing.foodId, name: ing.name, label: ing.labelName ? { name: ing.labelName } : null } : null,
+          note: ing.foodId ? (ing.ingNote || '') : ing.name,
+        }));
+        activeListItems.value = [...activeListItems.value, ...optimistic];
+      }
+
+      // Fire API calls in background — don't await
+      listAddPending.value = true;
+      (async () => {
         try {
-          const body = { shoppingListId: listId, checked: false };
-          if (!ing.name) continue;
-          let foodId = ing.foodId;
-          if (!foodId) {
-            const food = await findOrCreateFood(ing.name);
-            foodId = food?.id || null;
-          }
-          if (foodId) body.foodId = foodId;
-          else body.note = ing.name;
-          if (ing.qty != null && ing.qty > 0 && ing.unitId) {
-            const unitName = (ing.unitName || '').toLowerCase();
-            if (SHOPPING_UNITS.has(unitName)) {
-              body.quantity = Math.ceil(ing.qty);
-              body.unitId = ing.unitId;
+          // Resolve missing foodIds in parallel (deduplicated by name)
+          const foodMap = {};
+          const needFood = items.filter(i => !i.foodId);
+          if (needFood.length) {
+            const uniqueNames = [...new Set(needFood.map(i => i.name.toLowerCase()))];
+            const resolved = await Promise.allSettled(
+              uniqueNames.map(async (name) => {
+                const food = await findOrCreateFood(name);
+                return { name, id: food?.id || null };
+              })
+            );
+            for (const r of resolved) {
+              if (r.status === 'fulfilled' && r.value.id) foodMap[r.value.name] = r.value.id;
             }
           }
-          if (ing.ingNote) body.note = ing.ingNote;
-          await api('/households/shopping/items', { method: 'POST', body });
-          added++;
-        } catch { /* skip */ }
-      }
-      toast(`Added ${added} ingredient${added !== 1 ? 's' : ''} to ${listName}`);
-      if (listId === activeListId.value) refreshList();
+
+          // Post all items in parallel
+          const results = await Promise.allSettled(items.map(async (ing) => {
+            const body = { shoppingListId: listId, checked: false };
+            const foodId = ing.foodId || foodMap[ing.name.toLowerCase()] || null;
+            if (foodId) body.foodId = foodId;
+            else body.note = ing.name;
+            if (ing.qty != null && ing.qty > 0 && ing.unitId) {
+              const unitName = (ing.unitName || '').toLowerCase();
+              if (SHOPPING_UNITS.has(unitName)) {
+                body.quantity = Math.ceil(ing.qty);
+                body.unitId = ing.unitId;
+              }
+            }
+            if (ing.ingNote) body.note = ing.ingNote;
+            return api('/households/shopping/items', { method: 'POST', body });
+          }));
+          const failed = results.filter(r => r.status === 'rejected').length;
+          if (failed > 0) toast(`${failed} item${failed !== 1 ? 's' : ''} failed to add`);
+        } finally {
+          listAddPending.value = false;
+          if (listId === activeListId.value) refreshList();
+        }
+      })();
     });
   };
 

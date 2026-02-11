@@ -13,4 +13,9 @@ export const SK = {
   ACTIVE_LIST: 'mealie_active_list',
   ACTIVE_TAB: 'mealie_active_tab',
   REMEMBER: 'mealie_remember',
+  CACHE_LISTS: 'mealie_cache_lists',
+  CACHE_LIST_ITEMS: 'mealie_cache_list_items',
+  CACHE_LABELS: 'mealie_cache_labels',
+  CACHE_UNITS: 'mealie_cache_units',
+  CACHE_MEAL_PLAN: 'mealie_cache_meal_plan',
 };
