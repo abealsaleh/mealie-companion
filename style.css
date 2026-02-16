@@ -376,7 +376,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .category-select-bar select { flex: 1; font-size: 14px; }
 
 .shopping-scroll {
-  padding-bottom: 20px;
+  padding-bottom: 90px;  /* FAB height (56px) + bottom offset (24px) + extra space (10px) */
 }
 
 .category-group { margin-bottom: 4px; }

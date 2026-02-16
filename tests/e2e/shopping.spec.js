@@ -16,7 +16,7 @@ test.describe('Shopping List', () => {
 
   test('loads and displays shopping list items', async ({ page }) => {
     // Unchecked items should be in category groups
-    await expect(page.locator('.category-group')).toHaveCount(2); // Meat + Produce
+    await expect(page.locator('.category-group')).toHaveCount(3); // Meat + Produce + Dairy
     // Checked section should exist
     await expect(page.locator('.checked-section')).toBeVisible();
     // Specific items
