@@ -231,6 +231,14 @@ export const RECIPE_DETAIL = {
       note: 'Salt and pepper to taste',
       title: null,
     },
+    {
+      referenceId: 'ref-4',
+      quantity: 500,
+      unit: { id: 'unit-6', name: 'gram' },
+      food: { id: 'food-2', name: 'Milk', label: { id: 'label-2', name: 'Dairy' } },
+      note: '',
+      title: null,
+    },
   ],
 };
 
@@ -248,6 +256,7 @@ export const UNITS = [
   { id: 'unit-3', name: 'tablespoon' },
   { id: 'unit-4', name: 'teaspoon' },
   { id: 'unit-5', name: 'can' },
+  { id: 'unit-6', name: 'gram' },
 ];
 
 export const FOOD_SEARCH = {

@@ -198,13 +198,23 @@ export function IngredientModal() {
 
       // Optimistic UI: inject items into active list immediately
       if (listId === activeListId.value) {
-        const optimistic = items.map((ing, i) => ({
-          id: `_pending_${Date.now()}_${i}`,
-          checked: false,
-          quantity: (ing.qty != null && ing.qty > 0) ? Math.ceil(ing.qty) : 1,
-          food: ing.foodId ? { id: ing.foodId, name: ing.name, label: ing.labelName ? { name: ing.labelName } : null } : null,
-          note: ing.foodId ? (ing.ingNote || '') : ing.name,
-        }));
+        const optimistic = items.map((ing, i) => {
+          let qty = 1;
+          if (ing.qty != null && ing.qty > 0 && ing.unitId) {
+            const unitName = (ing.unitName || '').toLowerCase();
+            if (SHOPPING_UNITS.has(unitName)) {
+              qty = Math.ceil(ing.qty);
+            }
+          }
+
+          return {
+            id: `_pending_${Date.now()}_${i}`,
+            checked: false,
+            quantity: qty,
+            food: ing.foodId ? { id: ing.foodId, name: ing.name, label: ing.labelName ? { name: ing.labelName } : null } : null,
+            note: ing.foodId ? (ing.ingNote || '') : ing.name,
+          };
+        });
         activeListItems.value = [...activeListItems.value, ...optimistic];
       }
 
