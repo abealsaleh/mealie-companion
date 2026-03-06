@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { formatDateParam, getPlanRange, getRangeLabel } from '../../js/utils.js';
+import { formatDateParam, getPlanRange, getRangeLabel, getDefaultMealPlanDate } from '../../js/utils.js';
 import { PLAN_DAYS } from '../../js/constants.js';
+import { MEAL_PLAN_ENTRIES } from '../fixtures/data.js';
 
 describe('formatDateParam()', () => {
   it('formats as YYYY-MM-DD', () => {
@@ -57,5 +58,43 @@ describe('getRangeLabel()', () => {
     vi.setSystemTime(new Date(2025, 0, 28));
     const label = getRangeLabel();
     expect(label).toBe('Jan 28 \u2013 Feb 4');
+  });
+});
+
+describe('getDefaultMealPlanDate()', () => {
+  const dateOptions = [
+    { val: '2025-06-15', label: 'Today \u2013 Jun 15' },
+    { val: '2025-06-16', label: 'Tomorrow \u2013 Jun 16' },
+    { val: '2025-06-17', label: 'Mon \u2013 Jun 17' },
+  ];
+
+  it('returns first date without a dinner entry', () => {
+    const entries = [
+      { date: '2025-06-15', entryType: 'dinner' },
+      { date: '2025-06-15', entryType: 'lunch' },
+    ];
+    expect(getDefaultMealPlanDate(dateOptions, entries)).toBe('2025-06-16');
+  });
+
+  it('falls back to first option when all dates have dinners', () => {
+    const entries = [
+      { date: '2025-06-15', entryType: 'dinner' },
+      { date: '2025-06-16', entryType: 'dinner' },
+      { date: '2025-06-17', entryType: 'dinner' },
+    ];
+    expect(getDefaultMealPlanDate(dateOptions, entries)).toBe('2025-06-15');
+  });
+
+  it('returns first option when entries is empty or null', () => {
+    expect(getDefaultMealPlanDate(dateOptions, [])).toBe('2025-06-15');
+    expect(getDefaultMealPlanDate(dateOptions, null)).toBe('2025-06-15');
+  });
+
+  it('skips only dinner entries', () => {
+    const entries = [
+      { date: '2025-06-15', entryType: 'lunch' },
+      { date: '2025-06-15', entryType: 'breakfast' },
+    ];
+    expect(getDefaultMealPlanDate(dateOptions, entries)).toBe('2025-06-15');
   });
 });

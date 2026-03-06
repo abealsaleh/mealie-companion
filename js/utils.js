@@ -62,6 +62,24 @@ export function updateSignalArray(signal, idx, updates) {
   signal.value = arr;
 }
 
+export function partitionIngredientsForList(items, existingItems) {
+  const toCreate = [];
+  const toUpdate = [];
+  for (const ing of items) {
+    const match = ing.foodId ? existingItems.find(e => e.food?.id === ing.foodId) : null;
+    if (match) toUpdate.push({ ing, existing: match });
+    else toCreate.push(ing);
+  }
+  return { toCreate, toUpdate };
+}
+
+export function getDefaultMealPlanDate(dateOptions, entries) {
+  const dinnerDates = new Set(
+    (entries || []).filter(e => e.entryType === 'dinner').map(e => e.date)
+  );
+  return dateOptions.find(o => !dinnerDates.has(o.val))?.val ?? dateOptions[0]?.val;
+}
+
 export function ingLinkBadge(ing) {
   if (ing.foodId && ing.labelName) {
     return { text: ing.labelName, linked: true };

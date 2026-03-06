@@ -2,7 +2,7 @@ import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
 import { api, searchAndSortFoods, findOrCreateFood } from '../api.js';
 import { loadedIngredients, ingredientChecked, ingredientEditing, ingredientSlug, allUnits, activeListId, activeListItems, listAddPending } from '../signals.js';
 import { SHOPPING_UNITS } from '../constants.js';
-import { ingredientDisplayText, ingLinkBadge, esc, generateUUID, updateSignalArray } from '../utils.js';
+import { ingredientDisplayText, ingLinkBadge, esc, generateUUID, updateSignalArray, partitionIngredientsForList } from '../utils.js';
 import { toast } from './Toast.js';
 import { Icon } from './Icon.js';
 import { Modal } from './Modal.js';
@@ -196,17 +196,29 @@ export function IngredientModal() {
     showListPicker((listId, listName) => {
       toast(`Added ${items.length} ingredient${items.length !== 1 ? 's' : ''} to ${listName}`);
 
-      // Optimistic UI: inject items into active list immediately
-      if (listId === activeListId.value) {
-        const optimistic = items.map((ing, i) => {
-          let qty = 1;
-          if (ing.qty != null && ing.qty > 0 && ing.unitId) {
-            const unitName = (ing.unitName || '').toLowerCase();
-            if (SHOPPING_UNITS.has(unitName)) {
-              qty = Math.ceil(ing.qty);
-            }
-          }
+      // Snapshot existing list items before optimistic changes
+      const currentListItems = listId === activeListId.value ? activeListItems.value : [];
 
+      // Optimistic UI: partition and update in place
+      if (listId === activeListId.value) {
+        const { toCreate: optCreate, toUpdate: optUpdate } = partitionIngredientsForList(items, currentListItems);
+
+        const updatedExisting = currentListItems.map(e => {
+          const entry = optUpdate.find(u => u.existing.id === e.id);
+          if (!entry) return e;
+          const ing = entry.ing;
+          let qty = 1;
+          if (ing.qty != null && ing.qty > 0 && ing.unitId && SHOPPING_UNITS.has((ing.unitName || '').toLowerCase())) {
+            qty = Math.ceil(ing.qty);
+          }
+          return { ...e, quantity: e.quantity + qty };
+        });
+
+        const newOptimistic = optCreate.map((ing, i) => {
+          let qty = 1;
+          if (ing.qty != null && ing.qty > 0 && ing.unitId && SHOPPING_UNITS.has((ing.unitName || '').toLowerCase())) {
+            qty = Math.ceil(ing.qty);
+          }
           return {
             id: `_pending_${Date.now()}_${i}`,
             checked: false,
@@ -215,7 +227,8 @@ export function IngredientModal() {
             note: ing.foodId ? (ing.ingNote || '') : ing.name,
           };
         });
-        activeListItems.value = [...activeListItems.value, ...optimistic];
+
+        activeListItems.value = [...updatedExisting, ...newOptimistic];
       }
 
       // Fire API calls in background — don't await
@@ -238,11 +251,19 @@ export function IngredientModal() {
             }
           }
 
-          // Post all items in parallel
-          const results = await Promise.allSettled(items.map(async (ing) => {
+          // Build resolvedItems with filled-in foodIds
+          const resolvedItems = items.map(ing => ({
+            ...ing,
+            foodId: ing.foodId || foodMap[ing.name.toLowerCase()] || '',
+          }));
+
+          // Partition resolved items against the pre-optimistic snapshot
+          const { toCreate, toUpdate } = partitionIngredientsForList(resolvedItems, currentListItems);
+
+          // POST new items
+          const createResults = await Promise.allSettled(toCreate.map(async (ing) => {
             const body = { shoppingListId: listId, checked: false };
-            const foodId = ing.foodId || foodMap[ing.name.toLowerCase()] || null;
-            if (foodId) body.foodId = foodId;
+            if (ing.foodId) body.foodId = ing.foodId;
             else body.note = ing.name;
             if (ing.qty != null && ing.qty > 0 && ing.unitId) {
               const unitName = (ing.unitName || '').toLowerCase();
@@ -254,8 +275,21 @@ export function IngredientModal() {
             if (ing.ingNote) body.note = ing.ingNote;
             return api('/households/shopping/items', { method: 'POST', body });
           }));
-          const failed = results.filter(r => r.status === 'rejected').length;
-          if (failed > 0) toast(`${failed} item${failed !== 1 ? 's' : ''} failed to add`);
+
+          // PUT existing items with incremented quantity
+          const updateResults = await Promise.allSettled(toUpdate.map(async ({ ing, existing }) => {
+            let computedQty = 1;
+            if (ing.qty != null && ing.qty > 0 && ing.unitId && SHOPPING_UNITS.has((ing.unitName || '').toLowerCase())) {
+              computedQty = Math.ceil(ing.qty);
+            }
+            return api(`/households/shopping/items/${existing.id}`, {
+              method: 'PUT',
+              body: { ...existing, quantity: existing.quantity + computedQty },
+            });
+          }));
+
+          const failedCount = [...createResults, ...updateResults].filter(r => r.status === 'rejected').length;
+          if (failedCount > 0) toast(`${failedCount} item${failedCount !== 1 ? 's' : ''} failed to add`);
         } finally {
           listAddPending.value = false;
           if (listId === activeListId.value) refreshList();

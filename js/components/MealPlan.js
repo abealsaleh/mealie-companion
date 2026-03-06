@@ -1,6 +1,6 @@
 import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
 import { PLAN_DAYS, MEAL_ORDER, MEAL_ICONS, DAY_NAMES, MONTH_SHORT } from '../constants.js';
-import { formatDateParam, getPlanRange, getRangeLabel, isUrl, esc } from '../utils.js';
+import { formatDateParam, getPlanRange, getRangeLabel, isUrl, esc, getDefaultMealPlanDate } from '../utils.js';
 import { api } from '../api.js';
 import { activeListId, mealPlanEntries } from '../signals.js';
 import { toast } from './Toast.js';
@@ -141,6 +141,7 @@ export function MealPlan({ onOpenIngredients, active }) {
   };
 
   const dateOptions = populateDateOptions();
+  const defaultDate = getDefaultMealPlanDate(dateOptions, entries);
   const todayStr = formatDateParam(new Date());
 
   // Group entries by date
@@ -257,7 +258,7 @@ export function MealPlan({ onOpenIngredients, active }) {
             <div class="form-group">
               <label>Date</label>
               <select id="mp-date" ref=${dateRef}>
-                ${dateOptions.map(o => html`<option value=${o.val} key=${o.val}>${o.label}</option>`)}
+                ${dateOptions.map(o => html`<option value=${o.val} key=${o.val} selected=${o.val === defaultDate}>${o.label}</option>`)}
               </select>
             </div>
             <div class="form-group">
