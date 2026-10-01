@@ -1,7 +1,7 @@
 import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
 import { api, searchAndSortFoods, findOrCreateFood } from '../api.js';
 import { shoppingLists, activeListId, activeListItems, allLabels, labelMap, listAddPending } from '../signals.js';
-import { getItemDisplayName, getItem as getItemUtil, esc } from '../utils.js';
+import { getItemDisplayName, getItem as getItemUtil, esc, findMatchingItem, mergeIntoItem } from '../utils.js';
 import { toast } from './Toast.js';
 import { Icon } from './Icon.js';
 import { useAutocomplete } from './Autocomplete.js';
@@ -189,7 +189,15 @@ export function ShoppingList({ active }) {
           if (overrideLabel) body.labelId = overrideLabel;
         }
       }
-      await api('/households/shopping/items', { method: 'POST', body });
+      // A checked-off item for the same food is revived rather than left hidden in "Checked"
+      const match = findMatchingItem(activeListItems.value, body.foodId);
+      if (match?.checked) {
+        const revived = mergeIntoItem(match, 1);
+        if (body.labelId) revived.labelId = body.labelId;
+        await api(`/households/shopping/items/${match.id}`, { method: 'PUT', body: revived });
+      } else {
+        await api('/households/shopping/items', { method: 'POST', body });
+      }
       if (inputRef.current) inputRef.current.value = '';
       setSelectedFood(null);
       const catEl = document.getElementById('category-override');

@@ -1,4 +1,4 @@
-import { MONTH_SHORT } from './constants.js';
+import { MONTH_SHORT, SHOPPING_UNITS } from './constants.js';
 
 export function esc(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -62,11 +62,34 @@ export function updateSignalArray(signal, idx, updates) {
   signal.value = arr;
 }
 
+// Prefer an unchecked item so a checked duplicate is only revived when no active one exists
+export function findMatchingItem(items, foodId) {
+  if (!foodId) return null;
+  const matches = items.filter(e => e.food?.id === foodId);
+  return matches.find(e => !e.checked) || matches[0] || null;
+}
+
+// True when the ingredient's amount is in a unit you buy by (can, bunch, ...), not by measure
+export function isBuyable(ing) {
+  return ing.qty != null && ing.qty > 0 && !!ing.unitId && SHOPPING_UNITS.has((ing.unitName || '').toLowerCase());
+}
+
+export function shoppingQty(ing) {
+  return isBuyable(ing) ? Math.ceil(ing.qty) : 1;
+}
+
+// Re-adding a checked item unchecks it and resets its quantity; an unchecked item accumulates
+export function mergeIntoItem(existing, qty) {
+  if (!existing.checked) return { ...existing, quantity: existing.quantity + qty };
+  const now = new Date().toISOString();
+  return { ...existing, checked: false, quantity: qty, updateAt: now, updatedAt: now };
+}
+
 export function partitionIngredientsForList(items, existingItems) {
   const toCreate = [];
   const toUpdate = [];
   for (const ing of items) {
-    const match = ing.foodId ? existingItems.find(e => e.food?.id === ing.foodId) : null;
+    const match = findMatchingItem(existingItems, ing.foodId);
     if (match) toUpdate.push({ ing, existing: match });
     else toCreate.push(ing);
   }

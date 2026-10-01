@@ -1,8 +1,7 @@
 import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
 import { api, searchAndSortFoods, findOrCreateFood } from '../api.js';
 import { loadedIngredients, ingredientChecked, ingredientEditing, ingredientSlug, allUnits, activeListId, activeListItems, listAddPending } from '../signals.js';
-import { SHOPPING_UNITS } from '../constants.js';
-import { ingredientDisplayText, ingLinkBadge, esc, generateUUID, updateSignalArray, partitionIngredientsForList } from '../utils.js';
+import { ingredientDisplayText, ingLinkBadge, esc, generateUUID, updateSignalArray, partitionIngredientsForList, isBuyable, shoppingQty, mergeIntoItem } from '../utils.js';
 import { toast } from './Toast.js';
 import { Icon } from './Icon.js';
 import { Modal } from './Modal.js';
@@ -205,24 +204,14 @@ export function IngredientModal() {
 
         const updatedExisting = currentListItems.map(e => {
           const entry = optUpdate.find(u => u.existing.id === e.id);
-          if (!entry) return e;
-          const ing = entry.ing;
-          let qty = 1;
-          if (ing.qty != null && ing.qty > 0 && ing.unitId && SHOPPING_UNITS.has((ing.unitName || '').toLowerCase())) {
-            qty = Math.ceil(ing.qty);
-          }
-          return { ...e, quantity: e.quantity + qty };
+          return entry ? mergeIntoItem(e, shoppingQty(entry.ing)) : e;
         });
 
         const newOptimistic = optCreate.map((ing, i) => {
-          let qty = 1;
-          if (ing.qty != null && ing.qty > 0 && ing.unitId && SHOPPING_UNITS.has((ing.unitName || '').toLowerCase())) {
-            qty = Math.ceil(ing.qty);
-          }
           return {
             id: `_pending_${Date.now()}_${i}`,
             checked: false,
-            quantity: qty,
+            quantity: shoppingQty(ing),
             food: ing.foodId ? { id: ing.foodId, name: ing.name, label: ing.labelName ? { name: ing.labelName } : null } : null,
             note: ing.foodId ? (ing.ingNote || '') : ing.name,
           };
@@ -265,26 +254,19 @@ export function IngredientModal() {
             const body = { shoppingListId: listId, checked: false };
             if (ing.foodId) body.foodId = ing.foodId;
             else body.note = ing.name;
-            if (ing.qty != null && ing.qty > 0 && ing.unitId) {
-              const unitName = (ing.unitName || '').toLowerCase();
-              if (SHOPPING_UNITS.has(unitName)) {
-                body.quantity = Math.ceil(ing.qty);
-                body.unitId = ing.unitId;
-              }
+            if (isBuyable(ing)) {
+              body.quantity = shoppingQty(ing);
+              body.unitId = ing.unitId;
             }
             if (ing.ingNote) body.note = ing.ingNote;
             return api('/households/shopping/items', { method: 'POST', body });
           }));
 
-          // PUT existing items with incremented quantity
+          // PUT existing items: increment quantity, or uncheck and reset if checked off
           const updateResults = await Promise.allSettled(toUpdate.map(async ({ ing, existing }) => {
-            let computedQty = 1;
-            if (ing.qty != null && ing.qty > 0 && ing.unitId && SHOPPING_UNITS.has((ing.unitName || '').toLowerCase())) {
-              computedQty = Math.ceil(ing.qty);
-            }
             return api(`/households/shopping/items/${existing.id}`, {
               method: 'PUT',
-              body: { ...existing, quantity: existing.quantity + computedQty },
+              body: mergeIntoItem(existing, shoppingQty(ing)),
             });
           }));
 

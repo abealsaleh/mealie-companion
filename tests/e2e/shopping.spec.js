@@ -84,6 +84,31 @@ test.describe('Shopping List', () => {
     expect(postBody.foodId).toBe(foodId);
   });
 
+  test('re-adding a checked item unchecks it instead of creating a new one (regression: issue #19)', async ({ page }) => {
+    const milk = SHOPPING_LIST_DETAIL.listItems.find(i => i.id === 'item-3').food;
+    await page.route('**/api/foods*', (route, request) => {
+      if (request.method() === 'GET') return route.fulfill({ json: { items: [{ ...milk, labelId: milk.label.id }] } });
+      route.fallback();
+    });
+    let postCalled = false;
+    let putBody = null;
+    await page.route('**/api/households/shopping/items**', (route, request) => {
+      if (request.method() === 'POST') postCalled = true;
+      if (request.method() === 'PUT' && request.url().endsWith('/item-3')) putBody = request.postDataJSON();
+      route.fallback();
+    });
+
+    await page.click('#shop-fab');
+    await page.fill('#add-item-input', 'milk');
+    await expect(page.locator('#autocomplete-dropdown')).toHaveClass(/visible/);
+    await page.locator(`[data-action="select-food"][data-food-id="${milk.id}"]`).click();
+
+    await expect.poll(() => putBody).not.toBeNull();
+    expect(putBody.checked).toBe(false);
+    expect(putBody.quantity).toBe(1);
+    expect(postCalled).toBe(false);
+  });
+
   test('clear checked items', async ({ page }) => {
     const deletedIds = [];
     await page.route('**/api/households/shopping/items/*', (route, request) => {

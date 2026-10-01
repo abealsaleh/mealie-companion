@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mockAuthenticatedApp } from './helpers.js';
-import { RECIPE_DETAIL, SHOPPING_LISTS } from '../fixtures/data.js';
+import { RECIPE_DETAIL, SHOPPING_LISTS, SHOPPING_LIST_DETAIL } from '../fixtures/data.js';
 
 test.describe('Ingredients', () => {
   test.beforeEach(async ({ page }) => {
@@ -139,5 +139,34 @@ test.describe('Ingredients', () => {
     // Should be "1" (fixed) not "500" (bug)
     expect(qtyText).toBe('1');
     expect(qtyText).not.toBe('500');
+  });
+
+  test('re-adding a checked item unchecks it and resets quantity (regression: issue #19)', async ({ page }) => {
+    const putBodies = {};
+    await page.route('**/api/households/shopping/items/*', (route, request) => {
+      if (request.method() === 'PUT') {
+        putBodies[request.url().split('/').pop()] = request.postDataJSON();
+        return route.fulfill({ json: {} });
+      }
+      route.fallback();
+    });
+
+    // Load the active list so its items (incl. checked Milk, item-3) are known
+    await page.click('nav button:has-text("Shopping")');
+    await expect(page.locator('#shopping-content .shop-item')).toHaveCount(SHOPPING_LIST_DETAIL.listItems.length);
+    await page.click('nav button:has-text("Meal Plan")');
+
+    await page.click(`[data-action="open-ingredients"][data-slug="${RECIPE_DETAIL.slug}"]`);
+    await expect(page.locator('.ingredient-item')).toHaveCount(RECIPE_DETAIL.recipeIngredient.length);
+    await page.click('#ingredient-add-btn');
+    if (SHOPPING_LISTS.length > 1) {
+      await expect(page.locator('#list-picker-modal')).toHaveClass(/visible/);
+      await page.click('[data-action="pick-list"]:first-child');
+    }
+
+    // Milk (500 gram, non-buyable) requests quantity 1: replaces, not adds to, the old count
+    await expect.poll(() => putBodies['item-3']).toBeTruthy();
+    expect(putBodies['item-3'].checked).toBe(false);
+    expect(putBodies['item-3'].quantity).toBe(1);
   });
 });
