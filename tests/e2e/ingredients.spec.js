@@ -199,4 +199,53 @@ test.describe('Ingredients', () => {
     await expect.poll(() => postBodies.length).toBe(2);
     expect(postBodies.every(b => b.shoppingListId === otherList.id)).toBe(true);
   });
+
+  test.describe('while an add is still saving', () => {
+    const otherList = SHOPPING_LISTS[1];
+    const otherItem = { ...SHOPPING_LIST_DETAIL.listItems[0], id: 'other-1', food: { id: 'food-9', name: 'Balloons', label: null } };
+    let releasePosts;
+    let otherListGets;
+
+    test.beforeEach(async ({ page }) => {
+      otherListGets = 0;
+      const gate = new Promise(r => { releasePosts = r; });
+      await page.route(`**/api/households/shopping/lists/${otherList.id}`, (route) => {
+        otherListGets++;
+        route.fulfill({ json: { id: otherList.id, name: otherList.name, listItems: [otherItem] } });
+      });
+      // Hold item POSTs open to simulate a slow server
+      await page.route('**/api/households/shopping/items**', async (route, request) => {
+        if (request.method() !== 'POST') return route.fallback();
+        await gate;
+        route.fulfill({ json: { id: `new-${Date.now()}` } });
+      });
+      await page.click('nav button:has-text("Shopping")');
+      await expect(page.locator('#shopping-content .shop-item')).toHaveCount(SHOPPING_LIST_DETAIL.listItems.length);
+      await page.click('nav button:has-text("Meal Plan")');
+      await page.click(`[data-action="open-ingredients"][data-slug="${RECIPE_DETAIL.slug}"]`);
+      await expect(page.locator('.ingredient-item')).toHaveCount(RECIPE_DETAIL.recipeIngredient.length);
+      await page.click('#ingredient-add-btn');
+    });
+
+    test('switching to another list still loads it (regression: issue #19 follow-up)', async ({ page }) => {
+      await page.click(`[data-action="pick-list"][data-list-id="${SHOPPING_LIST_DETAIL.id}"]`);
+      await page.click('nav button:has-text("Shopping")');
+      await page.selectOption('#list-selector', otherList.id);
+
+      await expect(page.locator('#shopping-content .shop-item')).toHaveCount(1);
+      await expect(page.locator('.item-text', { hasText: 'Balloons' })).toBeVisible();
+      releasePosts();
+    });
+
+    test('switching to the target list refreshes it once the add finishes (regression: issue #19 follow-up)', async ({ page }) => {
+      await page.click(`[data-action="pick-list"][data-list-id="${otherList.id}"]`);
+      await page.click('nav button:has-text("Shopping")');
+      await page.selectOption('#list-selector', otherList.id);
+      await expect(page.locator('.item-text', { hasText: 'Balloons' })).toBeVisible();
+      const getsBeforeRelease = otherListGets;
+
+      releasePosts();
+      await expect.poll(() => otherListGets).toBeGreaterThan(getsBeforeRelease);
+    });
+  });
 });

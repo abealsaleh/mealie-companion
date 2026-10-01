@@ -1,6 +1,6 @@
 import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
 import { api, searchAndSortFoods, findOrCreateFood, fetchListItems } from '../api.js';
-import { shoppingLists, activeListId, activeListItems, allLabels, labelMap, listAddPending } from '../signals.js';
+import { shoppingLists, activeListId, activeListItems, allLabels, labelMap, listAddPendingId } from '../signals.js';
 import { getItemDisplayName, getItem as getItemUtil, esc, findMatchingItem, mergeIntoItem } from '../utils.js';
 import { toast } from './Toast.js';
 import { Icon } from './Icon.js';
@@ -22,9 +22,11 @@ export async function loadShoppingLists() {
   if (activeListId.value) await refreshList();
 }
 
-export async function refreshList() {
+// Background refreshes skip a list with an add in flight so they don't wipe its optimistic items;
+// force (an explicit list switch) always loads
+export async function refreshList({ force = false } = {}) {
   if (!activeListId.value) return;
-  if (listAddPending.value) return;
+  if (!force && listAddPendingId.value === activeListId.value) return;
   try {
     activeListItems.value = await fetchListItems(activeListId.value);
   } catch {
@@ -35,7 +37,7 @@ export async function refreshList() {
 function selectList(id) {
   activeListId.value = id;
   activeListItems.value = [];
-  refreshList();
+  refreshList({ force: true });
 }
 
 async function updateItem(itemId, mutate, revert, errorMsg) {

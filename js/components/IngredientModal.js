@@ -1,6 +1,6 @@
 import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
 import { api, searchAndSortFoods, findOrCreateFood, fetchListItems } from '../api.js';
-import { loadedIngredients, ingredientChecked, ingredientEditing, ingredientSlug, allUnits, activeListId, activeListItems, listAddPending } from '../signals.js';
+import { loadedIngredients, ingredientChecked, ingredientEditing, ingredientSlug, allUnits, activeListId, activeListItems, listAddPendingId } from '../signals.js';
 import { ingredientDisplayText, ingLinkBadge, esc, generateUUID, updateSignalArray, partitionIngredientsForList, isBuyable, shoppingQty, mergeIntoItem } from '../utils.js';
 import { toast } from './Toast.js';
 import { Icon } from './Icon.js';
@@ -222,7 +222,7 @@ export function IngredientModal() {
       }
 
       // Fire API calls in background — don't await
-      listAddPending.value = true;
+      listAddPendingId.value = listId;
       (async () => {
         try {
           // Resolve missing foodIds in parallel (deduplicated by name)
@@ -276,8 +276,9 @@ export function IngredientModal() {
           const failedCount = [...createResults, ...updateResults].filter(r => r.status === 'rejected').length;
           if (failedCount > 0) toast(`${failedCount} item${failedCount !== 1 ? 's' : ''} failed to add`);
         } finally {
-          listAddPending.value = false;
-          if (isActiveList) refreshList();
+          listAddPendingId.value = null;
+          // The user may have switched lists while this ran, so check the current one
+          if (listId === activeListId.value) refreshList();
         }
       })();
     });

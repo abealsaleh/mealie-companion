@@ -31,7 +31,8 @@ export const accessToken = signal(
 export const shoppingLists = cachedSignal(SK.CACHE_LISTS, []);
 export const activeListId = cachedSignal(SK.ACTIVE_LIST, '');
 export const activeListItems = cachedSignal(SK.CACHE_LIST_ITEMS, []);
-export const listAddPending = signal(false);
+// Id of the list an ingredient add is still writing to (null when idle)
+export const listAddPendingId = signal(null);
 export const allLabels = cachedSignal(SK.CACHE_LABELS, []);
 export const labelMap = computed(() => {
   const map = {};
