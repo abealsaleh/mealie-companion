@@ -1,5 +1,5 @@
 import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
-import { api, searchAndSortFoods, findOrCreateFood } from '../api.js';
+import { api, searchAndSortFoods, findOrCreateFood, fetchListItems } from '../api.js';
 import { shoppingLists, activeListId, activeListItems, allLabels, labelMap, listAddPending } from '../signals.js';
 import { getItemDisplayName, getItem as getItemUtil, esc, findMatchingItem, mergeIntoItem } from '../utils.js';
 import { toast } from './Toast.js';
@@ -26,8 +26,7 @@ export async function refreshList() {
   if (!activeListId.value) return;
   if (listAddPending.value) return;
   try {
-    const data = await api(`/households/shopping/lists/${activeListId.value}`);
-    activeListItems.value = data.listItems || [];
+    activeListItems.value = await fetchListItems(activeListId.value);
   } catch {
     toast('Failed to load list');
   }

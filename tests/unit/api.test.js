@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mockFetch, jsonResponse } from './fetch-mock.js';
-import { FOOD_SEARCH } from '../fixtures/data.js';
+import { FOOD_SEARCH, SHOPPING_LIST_DETAIL } from '../fixtures/data.js';
 
-let api, searchAndSortFoods, findOrCreateFood, accessToken;
+let api, searchAndSortFoods, findOrCreateFood, fetchListItems, accessToken;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -14,6 +14,7 @@ beforeEach(async () => {
   api = apiModule.api;
   searchAndSortFoods = apiModule.searchAndSortFoods;
   findOrCreateFood = apiModule.findOrCreateFood;
+  fetchListItems = apiModule.fetchListItems;
 });
 
 afterEach(() => {
@@ -106,5 +107,19 @@ describe('findOrCreateFood()', () => {
     mockFetch(() => { throw new Error('network fail'); });
     const result = await findOrCreateFood('anything');
     expect(result).toBeNull();
+  });
+});
+
+describe('fetchListItems()', () => {
+  it('returns the list items for the given list', async () => {
+    const fetchFn = mockFetch(() => jsonResponse(SHOPPING_LIST_DETAIL));
+    const items = await fetchListItems('list-1');
+    expect(fetchFn.mock.calls[0][0]).toContain('/households/shopping/lists/list-1');
+    expect(items).toEqual(SHOPPING_LIST_DETAIL.listItems);
+  });
+
+  it('returns an empty array when the list has no items field', async () => {
+    mockFetch(() => jsonResponse({ id: 'list-2' }));
+    expect(await fetchListItems('list-2')).toEqual([]);
   });
 });

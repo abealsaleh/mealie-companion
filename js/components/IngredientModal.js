@@ -1,5 +1,5 @@
 import { html, useState, useEffect, useRef, useCallback } from '../lib.js';
-import { api, searchAndSortFoods, findOrCreateFood } from '../api.js';
+import { api, searchAndSortFoods, findOrCreateFood, fetchListItems } from '../api.js';
 import { loadedIngredients, ingredientChecked, ingredientEditing, ingredientSlug, allUnits, activeListId, activeListItems, listAddPending } from '../signals.js';
 import { ingredientDisplayText, ingLinkBadge, esc, generateUUID, updateSignalArray, partitionIngredientsForList, isBuyable, shoppingQty, mergeIntoItem } from '../utils.js';
 import { toast } from './Toast.js';
@@ -196,10 +196,11 @@ export function IngredientModal() {
       toast(`Added ${items.length} ingredient${items.length !== 1 ? 's' : ''} to ${listName}`);
 
       // Snapshot existing list items before optimistic changes
-      const currentListItems = listId === activeListId.value ? activeListItems.value : [];
+      const isActiveList = listId === activeListId.value;
+      const currentListItems = isActiveList ? activeListItems.value : [];
 
       // Optimistic UI: partition and update in place
-      if (listId === activeListId.value) {
+      if (isActiveList) {
         const { toCreate: optCreate, toUpdate: optUpdate } = partitionIngredientsForList(items, currentListItems);
 
         const updatedExisting = currentListItems.map(e => {
@@ -246,8 +247,10 @@ export function IngredientModal() {
             foodId: ing.foodId || foodMap[ing.name.toLowerCase()] || '',
           }));
 
-          // Partition resolved items against the pre-optimistic snapshot
-          const { toCreate, toUpdate } = partitionIngredientsForList(resolvedItems, currentListItems);
+          // Partition against the pre-optimistic snapshot, or the picked list's items if it isn't loaded.
+          // If that fetch fails, fall back to creating everything rather than dropping the add.
+          const targetItems = isActiveList ? currentListItems : await fetchListItems(listId).catch(() => []);
+          const { toCreate, toUpdate } = partitionIngredientsForList(resolvedItems, targetItems);
 
           // POST new items
           const createResults = await Promise.allSettled(toCreate.map(async (ing) => {
@@ -274,7 +277,7 @@ export function IngredientModal() {
           if (failedCount > 0) toast(`${failedCount} item${failedCount !== 1 ? 's' : ''} failed to add`);
         } finally {
           listAddPending.value = false;
-          if (listId === activeListId.value) refreshList();
+          if (isActiveList) refreshList();
         }
       })();
     });

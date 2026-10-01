@@ -169,4 +169,34 @@ test.describe('Ingredients', () => {
     expect(putBodies['item-3'].checked).toBe(false);
     expect(putBodies['item-3'].quantity).toBe(1);
   });
+
+  test('adding to a non-active list merges with that list\'s items (regression: issue #19)', async ({ page }) => {
+    const otherList = SHOPPING_LISTS[1];
+    const [chicken, , milk] = SHOPPING_LIST_DETAIL.listItems; // unchecked food-1, checked food-2
+    await page.route(`**/api/households/shopping/lists/${otherList.id}`, (route) => {
+      route.fulfill({ json: { id: otherList.id, name: otherList.name, listItems: [
+        { ...chicken, id: 'other-chicken' },
+        { ...milk, id: 'other-milk' },
+      ] } });
+    });
+    const putBodies = {};
+    const postBodies = [];
+    await page.route('**/api/households/shopping/items**', (route, request) => {
+      if (request.method() === 'PUT') putBodies[request.url().split('/').pop()] = request.postDataJSON();
+      if (request.method() === 'POST') postBodies.push(request.postDataJSON());
+      route.fallback();
+    });
+
+    await page.click(`[data-action="open-ingredients"][data-slug="${RECIPE_DETAIL.slug}"]`);
+    await expect(page.locator('.ingredient-item')).toHaveCount(RECIPE_DETAIL.recipeIngredient.length);
+    await page.click('#ingredient-add-btn');
+    await page.click(`[data-action="pick-list"][data-list-id="${otherList.id}"]`);
+
+    await expect.poll(() => Object.keys(putBodies).sort()).toEqual(['other-chicken', 'other-milk']);
+    expect(putBodies['other-chicken'].quantity).toBe(chicken.quantity + 1);
+    expect(putBodies['other-milk']).toMatchObject({ checked: false, quantity: 1 });
+    // Only the unmatched ingredients (olive oil, salt) are created, on the picked list
+    await expect.poll(() => postBodies.length).toBe(2);
+    expect(postBodies.every(b => b.shoppingListId === otherList.id)).toBe(true);
+  });
 });

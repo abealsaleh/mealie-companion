@@ -43,6 +43,11 @@ export async function api(path, opts = {}) {
   return parseResponse(resp);
 }
 
+export async function fetchListItems(listId) {
+  const data = await api(`/households/shopping/lists/${listId}`);
+  return data.listItems || [];
+}
+
 export async function searchAndSortFoods(query, limit = 8) {
   const data = await api(`/foods?search=${encodeURIComponent(query)}&perPage=25&page=1`);
   const foods = data.items || [];
